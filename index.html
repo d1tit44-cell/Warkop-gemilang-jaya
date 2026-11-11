@@ -416,7 +416,7 @@ var IS_GAS = typeof google !== 'undefined' && google.script && google.script.run
 function tplVal(v){ return (!v || v.indexOf('<'+'?') === 0) ? '' : v; }
 
 /* Alamat "mesin" Google Apps Script. Aplikasi di GitHub memanggil alamat ini. */
-var API_URL = 'https://script.google.com/macros/s/AKfycbxBWSZLKre5PFoqXjUf_uCo_M8RtuX5cfXC8oL5sZlJxp_2zIdVFowy3dmihEVCnUikUA/exec';
+var API_URL = 'https://script.google.com/macros/s/AKfycbzjXX1jkPgVZ1sJzKOSdGfGdLNnZuh-XdOwRR_4RybJUDF8I9FIUScnTl2L8mDNS4ipQg/exec';
 var USE_API = !IS_GAS && /(^|\.)github\.io$/.test(location.hostname);
 
 function api(fn){
