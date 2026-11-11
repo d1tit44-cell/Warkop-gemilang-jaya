@@ -375,6 +375,21 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 .bjtotal b{font-family:Fraunces,serif;font-size:26px}
 .bjtotal small{display:block;font-size:12px;opacity:.85;margin-top:2px}
 
+/* ---------- Tambah cepat ---------- */
+.addrow{display:grid;grid-template-columns:1.2fr 1fr;gap:8px;margin-bottom:12px}
+.addrow .bigadd{margin:0;padding:12px 8px;flex-direction:column;gap:0;line-height:1.2}
+.addrow .bigadd small{font-size:11px;font-weight:600;opacity:.85}
+.qhead{display:none}
+.qrow{display:grid;grid-template-columns:1fr 1fr 38px;gap:6px;margin-bottom:8px;align-items:center;background:var(--bg);border-radius:12px;padding:8px}
+.qrow>[data-f="nama"]{grid-column:1/3;grid-row:1}
+.qrow>[data-del]{grid-column:3;grid-row:1}
+.qrow>input:nth-child(2){grid-column:1;grid-row:2}
+.qrow>input:nth-child(3){grid-column:2;grid-row:2}
+.qrow .input{padding:10px 8px;font-size:14px}
+.qprog{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin:8px 0;font-size:14px}
+.qprog .bar{height:6px;background:var(--line);border-radius:6px;margin-top:6px;overflow:hidden}
+.qprog .bar i{display:block;height:100%;background:var(--ok);transition:width .3s}
+
 /* ---------- Struk ---------- */
 #printArea{display:none}
 .struk{font-family:"Courier New",Courier,monospace;color:#000;background:#fff;font-size:12px;line-height:1.35;margin:0 auto;padding:6px 4px}
@@ -1188,7 +1203,7 @@ function tabMenu(){
   var list=A.data.menu.filter(function(m){ return !q || (m.nama+' '+m.kategori).toLowerCase().indexOf(q)>=0; });
   var cats=[]; list.forEach(function(m){ if(cats.indexOf(m.kategori)<0) cats.push(m.kategori); });
   $('#tab').innerHTML =
-    (isOwner() ? '<button class="btn bigadd" id="madd">＋ Tambah Menu Baru</button>' : '') +
+    (isOwner() ? '<div class="addrow"><button class="btn bigadd" id="mquick">⚡ Tambah Cepat<small>banyak menu sekaligus</small></button><button class="btn ghost bigadd" id="madd">＋ Satu Menu<small>dengan foto & detail</small></button></div>' : '') +
     '<label class="search" style="margin-bottom:10px"><span>🔎</span><input id="mq" type="search" placeholder="Cari menu…" value="'+esc(A.mq)+'"></label>' +
     (isOwner() ? '<div class="howto"><b>Cara pakai:</b><ol><li><b>＋ Tambah Menu Baru</b> → isi nama, harga, pilih kategori (atau buat kategori baru) → Simpan</li><li>Stok dihitung dari <b>bahan</b> (tab <b>Stok</b>). Hubungkan menu ke bahannya lewat ✏️ → <b>Bahan yang dipakai</b></li><li>✏️ = ubah nama, harga, foto, atau hapus menu</li><li>Tombol hijau = tandai tersedia / habis secara manual</li></ol></div>' : '<div class="howto">Tombol hijau = tandai tersedia / habis. Stok bahan diatur di tab <b>Stok</b>. Menambah/mengubah menu hanya bisa oleh Owner.</div>') +
     (list.length ? cats.map(function(c){
@@ -1203,6 +1218,7 @@ function tabMenu(){
     (A.data.menu.length && isOwner() ? '<button class="btn danger block" style="margin-top:24px" id="mclear">🗑️ Kosongkan Semua Menu (mulai dari nol)</button>' : '');
   $('#mq').addEventListener('input', function(e){ A.mq=e.target.value; var p=e.target.selectionStart; tabMenu(); var i=$('#mq'); if(!i) return; i.focus(); i.setSelectionRange(p,p); });
   if ($('#madd')) $('#madd').onclick=function(){ editItem(null); };
+  if ($('#mquick')) $('#mquick').onclick=quickAddMenu;
   $('#tab').onclick=function(e){ var b=e.target.closest('[data-edit]'); if(b) editItem(b.dataset.edit); var k=e.target.closest('[data-stok]'); if(k) editStock(k.dataset.stok); };
   if ($('#mclear')) $('#mclear').onclick=function(){
     confirmBox('Semua menu akan dihapus, termasuk menu contoh. Riwayat pesanan tetap aman. Lanjutkan?','Ya, kosongkan').then(function(ok){ if(!ok) return;
@@ -1342,7 +1358,7 @@ function tabStok(){
   var tipis=(A.data.bahan||[]).filter(function(b){ return b.stok<=b.minimal; }).length;
   $('#tab').innerHTML =
     '<div class="stats"><div class="stat"><small>JENIS BAHAN</small><b>'+(A.data.bahan||[]).length+'</b></div><div class="stat"><small>MENIPIS / HABIS</small><b style="color:'+(tipis?'var(--bad)':'var(--ok)')+'">'+tipis+'</b></div>'+(isOwner()?'<div class="stat"><small>LAPORAN</small><button class="btn sm" id="slap" style="margin-top:4px;padding:6px 10px">📄 Buka</button></div>':'<div class="stat"><small>STOK</small><b style="font-size:14px">Bahan</b></div>')+'</div>' +
-    (isOwner() ? '<button class="btn bigadd" id="sadd">＋ Tambah Bahan / Produk Stok</button>' : '') +
+    (isOwner() ? '<div class="addrow"><button class="btn bigadd" id="squick">⚡ Tambah Cepat<small>banyak bahan sekaligus</small></button><button class="btn ghost bigadd" id="sadd">＋ Satu Bahan</button></div>' : '') +
     '<label class="search" style="margin-bottom:10px"><span>🔎</span><input id="sq" type="search" placeholder="Cari bahan…" value="'+esc(S.q)+'"></label>' +
     '<div class="howto">Stok bahan berkurang <b>otomatis</b> saat ada pesanan (sesuai resep di tiap menu), dan kembali jika pesanan dibatalkan.<br>' +
       '<b>＋ Masuk</b> = barang datang / beli stok. '+(isOwner()?'<b>Koreksi</b> = samakan dengan jumlah asli setelah dihitung.':'')+'</div>' +
@@ -1356,6 +1372,7 @@ function tabStok(){
     }).join('') : '<div class="empty">Belum ada bahan.'+(isOwner()?'<br>Tekan <b>＋ Tambah Bahan</b>, misalnya <i>Indomie Goreng</i>, <i>Indomie Soto</i>, <i>Kentang</i>.':'')+'</div>');
   $('#sq').addEventListener('input', function(e){ S.q=e.target.value; var p=e.target.selectionStart; tabStok(); var i=$('#sq'); i.focus(); try{ i.setSelectionRange(p,p);}catch(x){} });
   if ($('#sadd')) $('#sadd').onclick=function(){ editBahan(null); };
+  if ($('#squick')) $('#squick').onclick=quickAddBahan;
   if ($('#slap')) $('#slap').onclick=function(){ openLaporanHariIni(); };
   $('#tab').onclick=function(e){ var t;
     if ((t=e.target.closest('[data-in]'))) stokForm(t.dataset.in,'Masuk');
@@ -1703,6 +1720,157 @@ function editBelanja(e){
   };
 }
 function refreshBahan(){ api('adminGetData', A.pin).then(function(d){ A.data.bahan=d.bahan||[]; A.data.menu=d.menu; }).catch(function(){}); }
+
+/* ---------- Tambah Cepat: banyak menu / bahan sekaligus ---------- */
+var TEMPLATE_MENU = {
+  'Indomie Goreng': ['Indomie Goreng Original','Indomie Goreng Rendang','Indomie Goreng Aceh','Indomie Goreng Cabe Ijo','Indomie Goreng Ayam Geprek','Indomie Goreng Iga Penyet','Indomie Goreng Pedas','Indomie Goreng Jumbo'],
+  'Indomie Kuah': ['Indomie Soto','Indomie Kari Ayam','Indomie Ayam Bawang','Indomie Ayam Spesial','Indomie Baso Sapi','Indomie Soto Lamongan','Indomie Empal Gentong','Indomie Seblak'],
+  'Minuman Panas': ['Kopi Hitam','Kopi Susu','Good Day Cappuccino','Good Day Mocacinno','Kopi ABC Susu','Luwak White Koffie','Teh Manis Panas','Susu Jahe','Wedang Jahe','Milo Panas','Energen'],
+  'Minuman Dingin': ['Es Teh Manis','Es Jeruk','Es Good Day','Es Milo','Es Nutrisari','Es Kopi Susu','Es Susu','Es Cappuccino','Es Teh Tarik'],
+  'Cemilan': ['Kentang Goreng','Roti Bakar Cokelat','Roti Bakar Keju','Roti Bakar Milo','Pisang Goreng','Tahu Crispy','Cireng','Sosis Goreng','Nugget Goreng','Pancong']
+};
+var TEMPLATE_BAHAN = {
+  'Indomie (bungkus)': ['Indomie Goreng','Indomie Rendang','Indomie Aceh','Indomie Cabe Ijo','Indomie Ayam Geprek','Indomie Soto','Indomie Kari Ayam','Indomie Ayam Bawang','Indomie Ayam Spesial'],
+  'Minuman sachet': ['Good Day Cappuccino','Good Day Mocacinno','Kopi ABC Susu','Luwak White Koffie','Kapal Api','Milo sachet','Nutrisari','Energen','Teh celup'],
+  'Bahan dapur': ['Telur','Kentang','Sosis','Nugget','Roti tawar','Gula pasir','Es batu','Air galon','Gas LPG']
+};
+function quickAddMenu(){
+  var cats=[]; A.data.menu.forEach(function(x){ if(cats.indexOf(x.kategori)<0) cats.push(x.kategori); });
+  var rows=[{nama:'',harga:'',stok:''},{nama:'',harga:'',stok:''},{nama:'',harga:'',stok:''}];
+  var sh=openSheet('<h3 class="serif">⚡ Tambah Cepat Menu</h3>' +
+    '<p class="muted" style="margin:0 0 8px;font-size:13px">Isi banyak menu sekaligus dalam satu kategori. Baris yang namanya kosong akan dilewati.</p>' +
+    '<label class="field"><span>1. KATEGORI</span><select class="input" id="qk">'+cats.map(function(c){ return '<option value="'+esc(c)+'">'+catIcon(c)+' '+esc(c)+'</option>'; }).join('')+
+      '<option value="__new"'+(cats.length?'':' selected')+'>＋ Kategori baru…</option></select>' +
+      '<input class="input'+(cats.length?' hidden':'')+'" id="qkn" maxlength="40" placeholder="Nama kategori baru, cth: Indomie Goreng" style="margin-top:8px"></label>' +
+    '<div class="field"><span>2. ISI CEPAT DARI TEMPLATE (opsional)</span><div class="catchips" id="qt">'+Object.keys(TEMPLATE_MENU).map(function(k){ return '<button type="button" data-t="'+esc(k)+'">'+catIcon(k)+' '+esc(k)+'</button>'; }).join('')+'</div>' +
+      '<div class="hint" style="text-align:left;margin-top:4px">Ketuk template, lalu hapus (✕) yang tidak dijual dan ubah nama jika perlu.</div></div>' +
+    '<div class="field"><span>3. HARGA SAMA UNTUK SEMUA (opsional)</span><div style="display:flex;gap:8px"><input class="input" id="qh" inputmode="numeric" placeholder="cth: 12000" style="flex:1"><button type="button" class="btn ghost" id="qha">Terapkan</button></div></div>' +
+    '<div class="field"><span>4. DAFTAR MENU</span><div class="qhead"><span>Nama menu</span><span>Harga</span><span title="Isi jika stok mau dihitung">Stok awal*</span><span></span></div><div id="qr"></div>' +
+      '<button type="button" class="btn ghost sm" id="qadd" style="margin-top:6px">＋ Tambah baris</button>' +
+      '<div class="hint" style="text-align:left">*Stok awal (opsional): jika diisi, dibuat juga <b>bahan stok</b> dengan nama yang sama dan langsung dihubungkan (1 porsi = 1). Kosongkan jika stok tidak dihitung. Jika bahan dengan nama itu sudah ada, langsung dipakai.</div></div>' +
+    '<div class="qprog hidden" id="qp"></div>' +
+    '<button class="btn block" id="qs">Simpan Semua</button>');
+  function draw(){
+    $('#qr',sh).innerHTML = rows.map(function(r,i){
+      var ada = r.nama && bahanByName(r.nama);
+      return '<div class="qrow" data-i="'+i+'"><input class="input" data-f="nama" maxlength="80" placeholder="Nama menu" value="'+esc(r.nama)+'">' +
+        '<input class="input" data-f="harga" inputmode="numeric" placeholder="Harga (Rp)" value="'+fmtNum(r.harga)+'">' +
+        '<input class="input" data-f="stok" inputmode="numeric" placeholder="'+(ada?'Stok: sudah ada ✓':'Stok awal (opsional)')+'" value="'+esc(r.stok)+'">' +
+        '<button type="button" class="icon-btn" data-del="'+i+'">✕</button></div>';
+    }).join('');
+  }
+  draw();
+  $('#qk',sh).onchange=function(){ var n=this.value==='__new'; $('#qkn',sh).classList.toggle('hidden',!n); if(n) $('#qkn',sh).focus(); };
+  $('#qt',sh).onclick=function(e){ var b=e.target.closest('[data-t]'); if(!b) return; var k=b.dataset.t;
+    var names=TEMPLATE_MENU[k].filter(function(n){ return !A.data.menu.some(function(m){ return m.nama.toLowerCase()===n.toLowerCase(); }); });
+    rows = rows.filter(function(r){ return r.nama; }).concat(names.map(function(n){ return {nama:n,harga:'',stok:''}; }));
+    if (!rows.length) rows=[{nama:'',harga:'',stok:''}];
+    if ($('#qk',sh).value==='__new' && !$('#qkn',sh).value) $('#qkn',sh).value=k;
+    else if (cats.indexOf(k)>=0) $('#qk',sh).value=k;
+    draw(); toast(names.length+' menu ditambahkan ke daftar'+(names.length<TEMPLATE_MENU[k].length?' (yang sudah ada dilewati)':''));
+  };
+  $('#qha',sh).onclick=function(){ var h=String($('#qh',sh).value).replace(/\D/g,''); if(!h){ toast('Isi harganya dulu',true); return; } rows.forEach(function(r){ if(r.nama) r.harga=h; }); draw(); };
+  $('#qh',sh).addEventListener('input', function(){ this.value=fmtNum(this.value); });
+  $('#qadd',sh).onclick=function(){ rows.push({nama:'',harga:'',stok:''}); draw(); var ins=sh.querySelectorAll('#qr [data-f="nama"]'); ins[ins.length-1].focus(); };
+  $('#qr',sh).addEventListener('input', function(e){ var row=e.target.closest('[data-i]'); if(!row) return; var r=rows[+row.dataset.i], f=e.target.dataset.f;
+    if (f==='harga'){ e.target.value=fmtNum(e.target.value); r.harga=e.target.value.replace(/\D/g,''); }
+    else if (f==='stok'){ r.stok=e.target.value.replace(/\D/g,''); e.target.value=r.stok; }
+    else r.nama=e.target.value; });
+  $('#qr',sh).addEventListener('click', function(e){ var t=e.target.closest('[data-del]'); if(!t) return; rows.splice(+t.dataset.del,1); if(!rows.length) rows.push({nama:'',harga:'',stok:''}); draw(); });
+  $('#qs',sh).onclick=function(){
+    var kat = $('#qk',sh).value==='__new' ? $('#qkn',sh).value.trim() : $('#qk',sh).value;
+    if (!kat){ toast('Isi nama kategori',true); return; }
+    var list=rows.map(function(r){ return {nama:String(r.nama).trim(), harga:parseInt(r.harga,10)||0, stok:r.stok}; }).filter(function(r){ return r.nama; });
+    if (!list.length){ toast('Isi minimal 1 nama menu',true); return; }
+    var noHarga=list.filter(function(r){ return !r.harga; });
+    if (noHarga.length){ toast('Harga belum diisi: '+noHarga.map(function(r){ return r.nama; }).slice(0,3).join(', ')+(noHarga.length>3?'…':''),true); return; }
+    var dup={}; for (var i=0;i<list.length;i++){ var k=list[i].nama.toLowerCase(); if(dup[k]){ toast('Nama dobel: '+list[i].nama,true); return; } dup[k]=1; }
+    var btn=this; btn.disabled=true; A.lastCat=kat;
+    var prog=$('#qp',sh); prog.classList.remove('hidden');
+    var ok=0, gagal=[];
+    var urutanAwal = A.data.menu.length;
+    function step(i){
+      if (i>=list.length){
+        prog.innerHTML = '✅ <b>'+ok+' menu</b> tersimpan'+(gagal.length?'<br>⚠️ Gagal: '+gagal.map(esc).join(', ')+' — coba simpan lagi':'');
+        api('adminGetData', A.pin).then(function(d){ A.data.menu=d.menu; A.data.bahan=d.bahan||[]; if(A.tab==='menu') tabMenu(); });
+        if (!gagal.length){ setTimeout(function(){ closeSheet(); toast(ok+' menu baru di kategori '+kat+' ✓'); }, 900); }
+        else { btn.disabled=false; rows=list.filter(function(r){ return gagal.indexOf(r.nama)>=0; }).map(function(r){ return {nama:r.nama,harga:r.harga,stok:r.stok}; }); draw(); }
+        return;
+      }
+      var r=list[i];
+      prog.innerHTML = '⏳ Menyimpan '+(i+1)+' dari '+list.length+': <b>'+esc(r.nama)+'</b>…<div class="bar"><i style="width:'+Math.round(i/list.length*100)+'%"></i></div>';
+      var pBahan = Promise.resolve(null);
+      if (r.stok!=='' && r.stok!==undefined){
+        var ada=bahanByName(r.nama);
+        pBahan = ada ? Promise.resolve(ada.id) : api('adminSaveBahan', A.pin, {nama:r.nama, satuan:'porsi', minimal:3, stokAwal:parseInt(r.stok,10)||0})
+          .then(function(lst){ A.data.bahan=lst; var b=bahanByName(r.nama); return b?b.id:null; });
+      }
+      pBahan.then(function(bid){
+        return api('adminSaveItem', A.pin, {id:'', nama:r.nama, kategori:kat, harga:r.harga, deskripsi:'', foto:'', tersedia:true, bestSeller:false,
+          urutan:urutanAwal+i+1, stok:'', resep: bid ? [{b:bid, q:1, alt:[]}] : []});
+      }).then(function(menu){ A.data.menu=menu; ok++; step(i+1); })
+        .catch(function(){ gagal.push(r.nama); step(i+1); });
+    }
+    step(0);
+  };
+}
+function bahanByName(n){ n=String(n||'').trim().toLowerCase(); return (A.data.bahan||[]).filter(function(b){ return b.nama.toLowerCase()===n; })[0]; }
+
+function quickAddBahan(){
+  var rows=[{nama:'',satuan:'bungkus',stok:''},{nama:'',satuan:'bungkus',stok:''},{nama:'',satuan:'bungkus',stok:''}];
+  var sh=openSheet('<h3 class="serif">⚡ Tambah Cepat Bahan / Stok</h3>' +
+    '<p class="muted" style="margin:0 0 8px;font-size:13px">Isi banyak bahan sekaligus beserta jumlah stok yang ada sekarang.</p>' +
+    '<div class="field"><span>ISI CEPAT DARI TEMPLATE (opsional)</span><div class="catchips" id="bt">'+Object.keys(TEMPLATE_BAHAN).map(function(k){ return '<button type="button" data-t="'+esc(k)+'">'+esc(k)+'</button>'; }).join('')+'</div></div>' +
+    '<div class="field"><span>DAFTAR BAHAN</span><div class="qhead b"><span>Nama bahan</span><span>Satuan</span><span>Stok sekarang</span><span></span></div><div id="br"></div>' +
+      '<button type="button" class="btn ghost sm" id="badd" style="margin-top:6px">＋ Tambah baris</button></div>' +
+    '<datalist id="bsatl">'+['bungkus','pcs','porsi','sachet','renceng','butir','botol','kg','liter','tabung'].map(function(x){ return '<option value="'+x+'">'; }).join('')+'</datalist>' +
+    '<div class="qprog hidden" id="bp"></div>' +
+    '<button class="btn block" id="bs">Simpan Semua</button>' +
+    '<div class="hint" style="text-align:left">Setelah itu hubungkan ke menu: tab <b>Menu</b> → ✏️ → <b>Bahan yang dipakai</b>.</div>');
+  function draw(){
+    $('#br',sh).innerHTML = rows.map(function(r,i){
+      var ada=r.nama && bahanByName(r.nama);
+      return '<div class="qrow b" data-i="'+i+'"><input class="input" data-f="nama" maxlength="60" placeholder="Nama bahan" value="'+esc(r.nama)+'"'+(ada?' style="border-color:var(--warn)"':'')+'>' +
+        '<input class="input" data-f="satuan" list="bsatl" maxlength="15" placeholder="Satuan" value="'+esc(r.satuan)+'">' +
+        '<input class="input" data-f="stok" inputmode="numeric" placeholder="Stok sekarang" value="'+esc(r.stok)+'">' +
+        '<button type="button" class="icon-btn" data-del="'+i+'">✕</button></div>';
+    }).join('');
+  }
+  draw();
+  $('#bt',sh).onclick=function(e){ var b=e.target.closest('[data-t]'); if(!b) return; var k=b.dataset.t;
+    var sat = /sachet/i.test(k) ? 'sachet' : /Indomie/.test(k) ? 'bungkus' : 'pcs';
+    var names=TEMPLATE_BAHAN[k].filter(function(n){ return !bahanByName(n); });
+    rows = rows.filter(function(r){ return r.nama; }).concat(names.map(function(n){ return {nama:n,satuan:/Telur/.test(n)?'butir':/Gas/.test(n)?'tabung':/Gula|Kentang/.test(n)?'kg':/galon/i.test(n)?'galon':sat,stok:''}; }));
+    if (!rows.length) rows=[{nama:'',satuan:'bungkus',stok:''}];
+    draw(); toast(names.length+' bahan ditambahkan ke daftar'+(names.length<TEMPLATE_BAHAN[k].length?' (yang sudah ada dilewati)':''));
+  };
+  $('#badd',sh).onclick=function(){ rows.push({nama:'',satuan:'bungkus',stok:''}); draw(); var ins=sh.querySelectorAll('#br [data-f="nama"]'); ins[ins.length-1].focus(); };
+  $('#br',sh).addEventListener('input', function(e){ var row=e.target.closest('[data-i]'); if(!row) return; var r=rows[+row.dataset.i], f=e.target.dataset.f;
+    if (f==='stok'){ r.stok=e.target.value.replace(/\D/g,''); e.target.value=r.stok; } else r[f]=e.target.value; });
+  $('#br',sh).addEventListener('click', function(e){ var t=e.target.closest('[data-del]'); if(!t) return; rows.splice(+t.dataset.del,1); if(!rows.length) rows.push({nama:'',satuan:'bungkus',stok:''}); draw(); });
+  $('#bs',sh).onclick=function(){
+    var list=rows.map(function(r){ return {nama:String(r.nama).trim(), satuan:String(r.satuan||'pcs').trim()||'pcs', stok:parseInt(r.stok,10)||0}; }).filter(function(r){ return r.nama; });
+    if (!list.length){ toast('Isi minimal 1 nama bahan',true); return; }
+    var sudah=list.filter(function(r){ return bahanByName(r.nama); });
+    if (sudah.length){ toast('Sudah ada: '+sudah.map(function(r){ return r.nama; }).join(', ')+'. Hapus barisnya atau pakai ＋ Masuk di tab Stok.',true); return; }
+    var dup={}; for (var i=0;i<list.length;i++){ var k=list[i].nama.toLowerCase(); if(dup[k]){ toast('Nama dobel: '+list[i].nama,true); return; } dup[k]=1; }
+    var btn=this; btn.disabled=true; var prog=$('#bp',sh); prog.classList.remove('hidden'); var ok=0, gagal=[];
+    function step(i){
+      if (i>=list.length){
+        prog.innerHTML='✅ <b>'+ok+' bahan</b> tersimpan'+(gagal.length?'<br>⚠️ Gagal: '+gagal.map(esc).join(', '):'');
+        if (A.tab==='stok') tabStok();
+        if (!gagal.length) setTimeout(function(){ closeSheet(); toast(ok+' bahan baru tersimpan ✓'); }, 900);
+        else { btn.disabled=false; rows=list.filter(function(r){ return gagal.indexOf(r.nama)>=0; }).map(function(r){ return {nama:r.nama,satuan:r.satuan,stok:String(r.stok)}; }); draw(); }
+        return;
+      }
+      var r=list[i];
+      prog.innerHTML='⏳ Menyimpan '+(i+1)+' dari '+list.length+': <b>'+esc(r.nama)+'</b>…<div class="bar"><i style="width:'+Math.round(i/list.length*100)+'%"></i></div>';
+      api('adminSaveBahan', A.pin, {nama:r.nama, satuan:r.satuan, minimal:5, stokAwal:r.stok}).then(function(lst){ A.data.bahan=lst; ok++; step(i+1); })
+        .catch(function(){ gagal.push(r.nama); step(i+1); });
+    }
+    step(0);
+  };
+}
 
 /* ---------- Tab Keuangan / Kas (khusus Owner) ---------- */
 var BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
