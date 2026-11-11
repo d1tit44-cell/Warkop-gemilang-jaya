@@ -1,0 +1,15 @@
+{
+  "name": "Kasir Warkop Gemilang Jaya",
+  "short_name": "Kasir Warkop",
+  "description": "Aplikasi owner & kasir Warkop Gemilang Jaya",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f6efe4",
+  "theme_color": "#b8532a",
+  "icons": [
+    { "src": "icon.png", "sizes": "192x192 512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
