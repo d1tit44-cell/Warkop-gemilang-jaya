@@ -462,6 +462,23 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 .catbox.foto .ov b{font-size:11.5px;min-height:0}
 .catbox.foto .ov small{font-size:9.5px}
 
+/* ---------- Daftar menu pelanggan: 5 kolom ringkas ---------- */
+#view .items{grid-template-columns:repeat(5,1fr);gap:5px}
+#view .ibox{padding:5px 4px 5px;border-radius:10px;min-height:0;gap:1px;border-width:2px}
+#view .ibox img{width:calc(100% + 8px);margin:-5px -4px 3px;aspect-ratio:1/1;border-radius:8px 8px 0 0}
+#view .ibox .nm{font-size:10px;line-height:1.15;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;min-height:23px;word-break:break-word}
+#view .ibox .ds{display:none}
+#view .ibox .pr{padding-top:1px;min-height:0}
+#view .ibox .price{font-size:10.5px}
+#view .ibox .habis{font-size:10px}
+#view .ibox .sisa{font-size:9.5px}
+#view .addbtn{margin-top:3px;padding:5px 0;font-size:15px;border-radius:8px;line-height:1}
+#view .qctl{margin-top:3px;padding:1px}
+#view .qctl .qb{width:20px;height:24px;font-size:14px;border-radius:7px}
+#view .qctl span{font-size:11px}
+#view .hscroll .ibox{flex:0 0 92px}
+@media(min-width:560px){#view .items{grid-template-columns:repeat(6,1fr)}}
+
 /* ---------- Struk ---------- */
 #printArea{display:none}
 .struk{font-family:"Courier New",Courier,monospace;color:#000;background:#fff;font-size:12px;line-height:1.35;margin:0 auto;padding:6px 4px}
@@ -888,7 +905,7 @@ function renderView(){
 function itemsGrid(xs){
   if (!xs.length) return '<div class="empty">Menu tidak ditemukan.</div>';
   return '<div class="items">'+xs.map(itemBox).join('')+'</div>' +
-    (C.data.settings.pesan_aktif ? '<p class="tip">Tekan ＋ Tambah untuk memasukkan ke pesanan</p>' : '');
+    (C.data.settings.pesan_aktif ? '<p class="tip">Tekan ＋ untuk memasukkan ke pesanan</p>' : '');
 }
 
 function itemBox(m){
@@ -901,7 +918,7 @@ function itemBox(m){
     (avail(m) && hasStok(m) && Number(m.stok)<=5 ? '<div class="sisa">Sisa '+Number(m.stok)+'</div>' : '') +
     (C.data.settings.pesan_aktif && avail(m) ?
       (qty ? '<div class="qctl"><button class="qb minus2" data-dec="'+m.id+'" aria-label="Kurangi">−</button><span>'+qty+'</span><button class="qb plus" data-inc="'+m.id+'" aria-label="Tambah">+</button></div>'
-           : '<button class="addbtn" data-inc="'+m.id+'">＋ Tambah</button>') : '') +
+           : '<button class="addbtn" data-inc="'+m.id+'" aria-label="Tambah">＋</button>') : '') +
   '</div>';
 }
 
