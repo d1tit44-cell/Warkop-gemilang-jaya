@@ -507,6 +507,11 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 .qinfo{font-size:11.5px;color:var(--muted);margin-top:2px}
 .qinfo.ok{color:var(--ok);font-weight:700}.qinfo.warn{color:#7a5210;font-weight:700}
 
+/* ---------- Laporan gambar ---------- */
+.lgimg{width:100%;border-radius:12px;border:1px solid var(--line);display:block;margin-bottom:10px;box-shadow:var(--shadow)}
+.lapbtn a.btn{text-decoration:none;text-align:center}
+.pdfsteps{margin:6px 0 10px;padding-left:20px;line-height:1.7;font-size:14px}
+
 /* ---------- Struk ---------- */
 #printArea{display:none}
 .struk{font-family:"Courier New",Courier,monospace;color:#000;background:#fff;font-size:12px;line-height:1.35;margin:0 auto;padding:6px 4px}
@@ -1622,8 +1627,9 @@ function lapData(d){
   var c=kasCalc(d.orders, d.entries);
   var menu={}, diskon=0;
   d.orders.forEach(function(o){
-    if (o.status==='Batal') return;
-    diskon += (o.statusBayar==='Lunas') ? (o.diskon||0) : 0;
+    // hanya pesanan LUNAS, supaya total per menu sama dengan uang penjualan
+    if (o.status==='Batal' || o.statusBayar!=='Lunas') return;
+    diskon += (o.diskon||0);
     o.items.forEach(function(i){ var k=i.nama; var x=menu[k]=menu[k]||{nama:k,qty:0,rp:0}; x.qty+=Number(i.qty)||0; x.rp+=(Number(i.qty)||0)*(Number(i.harga)||0); });
   });
   var jual=Object.keys(menu).map(function(k){ return menu[k]; }).sort(function(a,b){ return b.qty-a.qty || a.nama.localeCompare(b.nama); });
@@ -1670,8 +1676,10 @@ function renderLaporan(sh, d, label, from, to){
       (L.keluar.length || L.belanja.length ? L.keluar.map(function(x){ return '<div class="lr"><span>'+esc(x.kat)+(x.n>1?' ('+x.n+'×)':'')+(x.cat.length?'<small> · '+esc(x.cat.slice(0,3).join('; '))+'</small>':'')+'</span><b>'+rp(x.rp)+'</b></div>'; }).join('') +
         '<div class="lr tot sm"><span>Total</span><b>'+rp(c.keluar)+'</b></div>' : '<div class="lnote">Tidak ada pengeluaran.</div>') +
     '</div></div>' +
-    '<div class="lapbtn"><button class="btn" id="lcopy">📋 Salin teks untuk WhatsApp</button><button class="btn ghost" id="lprint">🖨️ Cetak / PDF</button></div>' +
-    '<div class="hint" style="text-align:left">Tips: <b>screenshot</b> kotak laporan di atas (bisa screenshot panjang), atau salin teks lalu tempel di WhatsApp bos.</div>';
+    '<div class="lapbtn"><button class="btn" id="limg2" style="background:#25a244">🖼️ Kirim sebagai Gambar (paling mudah dibaca)</button>' +
+      '<button class="btn ghost" id="lprint">📄 Simpan sebagai PDF</button><button class="btn ghost" id="lcopy">📋 Salin teks untuk WhatsApp</button></div>' +
+    '<div class="hint" style="text-align:left">Saran: kirim sebagai <b>gambar</b> — bos cukup membuka seperti foto biasa, rapi dan tidak perlu aplikasi lain.</div>';
+  html = '<button class="btn block" id="limg" style="background:#25a244;margin-bottom:12px">🖼️ Kirim Laporan sebagai Gambar</button>' + html;
   $('#lapw',sh).innerHTML=html;
   $('#lcopy',sh).onclick=function(){
     var t=['*LAPORAN '+(from===to?'HARIAN':'PERIODE')+' '+(s.nama_warkop||'').toUpperCase()+'*', label, 'Dibuat '+jam+' oleh '+A.me.nama, '',
@@ -1690,11 +1698,141 @@ function renderLaporan(sh, d, label, from, to){
     function ok(){ btn.textContent='✓ Tersalin! Tempel di WhatsApp'; btn.style.background='var(--ok)'; }
     try { navigator.clipboard.writeText(text).then(ok, function(){ fallbackCopy(text) ? ok() : showText(text); }); } catch(e){ fallbackCopy(text) ? ok() : showText(text); }
   };
-  $('#lprint',sh).onclick=function(){ var card=$('#lapcard',sh).outerHTML; var area=document.getElementById('printArea'); area.innerHTML=card; document.body.classList.add('print-struk');
-    try{ window.print(); }catch(e){ toast('Cetak tidak didukung di sini, silakan screenshot',true); } setTimeout(function(){ document.body.classList.remove('print-struk'); area.innerHTML=''; }, 800); };
+  $('#limg',sh).onclick=$('#limg2',sh).onclick=function(){ bukaLaporanGambar(d, label, from, to); };
+  $('#lprint',sh).onclick=function(){
+    var info=openSheet('<h3 class="serif">📄 Simpan sebagai PDF</h3>' +
+      '<ol class="pdfsteps"><li>Tekan <b>Lanjut</b> — layar cetak akan terbuka.</li><li>Di <b>bagian paling atas</b>, ketuk nama printer (mis. <i>RawBT</i> / printer struk).</li><li>Ganti menjadi <b>"Simpan sebagai PDF"</b>.</li><li>Ketuk tombol bulat <b>PDF ⬇️</b>, lalu simpan.</li></ol>' +
+      '<div class="hint" style="text-align:left">File PDF tersimpan di folder <b>Download</b> dan bisa dikirim lewat WhatsApp sebagai dokumen. Kalau terlalu ribet, pakai saja <b>Kirim sebagai Gambar</b>.</div>' +
+      '<button class="btn block" id="pdfgo" style="margin-top:10px">Lanjut</button>');
+    $('#pdfgo',info).onclick=function(){ closeSheet(); setTimeout(cetakPdf, 300); };
+  };
+  function cetakPdf(){ var card=$('#lapcard',sh).outerHTML; var area=document.getElementById('printArea'); area.innerHTML=card; document.body.classList.add('print-struk');
+    try{ window.print(); }catch(e){ toast('Cetak tidak didukung di sini, silakan pakai Kirim sebagai Gambar',true); } setTimeout(function(){ document.body.classList.remove('print-struk'); area.innerHTML=''; }, 800); }
   function showText(text){ var ta=document.createElement('textarea'); ta.className='input'; ta.style.height='200px'; ta.value=text; $('#lapw',sh).appendChild(ta); toast('Tekan lama teks di bawah → Pilih semua → Salin'); }
 }
 function fallbackCopy(text){ try{ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); return ok; }catch(e){ return false; } }
+
+/* ---------- Laporan sebagai GAMBAR (rapi, siap kirim WhatsApp) ---------- */
+function laporanGambar(d, label, from, to){
+  var L=lapData(d), c=L.c, s=A.data.settings, now=new Date();
+  var jam=('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
+  var W=1080, P=56, F='"Plus Jakarta Sans", "Segoe UI", Roboto, Arial, sans-serif', FS='Fraunces, Georgia, serif';
+  var cv=document.createElement('canvas'); cv.width=W; cv.height=9000;
+  var g=cv.getContext('2d'); g.fillStyle='#ffffff'; g.fillRect(0,0,W,cv.height); g.textBaseline='alphabetic';
+  var y=0;
+  function font(sz, w, fam){ g.font=(w||'500')+' '+sz+'px '+(fam||F); }
+  function txt(t, x, yy, sz, w, col, align, fam){ font(sz,w,fam); g.fillStyle=col||'#1d1410'; g.textAlign=align||'left'; g.fillText(t, x, yy); }
+  function fit(t, maxW, sz, w){ font(sz,w); t=String(t); if (g.measureText(t).width<=maxW) return t; while(t.length>1 && g.measureText(t+'…').width>maxW) t=t.slice(0,-1); return t+'…'; }
+  function hr(yy, col, dash){ g.strokeStyle=col||'#d9cdbb'; g.lineWidth=2; g.setLineDash(dash?[10,8]:[]); g.beginPath(); g.moveTo(P,yy); g.lineTo(W-P,yy); g.stroke(); g.setLineDash([]); }
+  function box(x,yy,w,h,r,fill){ g.fillStyle=fill; g.beginPath(); g.moveTo(x+r,yy); g.arcTo(x+w,yy,x+w,yy+h,r); g.arcTo(x+w,yy+h,x,yy+h,r); g.arcTo(x,yy+h,x,yy,r); g.arcTo(x,yy,x+w,yy,r); g.closePath(); g.fill(); }
+  function row(l, r, opt){ opt=opt||{}; var sz=opt.sz||32; y+=opt.gap||50;
+    var rw=0; if (r){ font(sz, opt.bold?'800':'700'); rw=g.measureText(r).width; }
+    txt(fit(l, W-2*P-rw-30-(opt.indent||0), sz, opt.bold?'800':'500'), P+(opt.indent||0), y, sz, opt.bold?'800':'500', opt.lcol||'#1d1410');
+    if (r) txt(r, W-P, y, sz, opt.bold?'800':'700', opt.rcol||'#1d1410', 'right'); }
+  function section(t){ y+=78; txt(t, P, y, 36, '800', '#b8532a'); y+=18; hr(y,'#1d1410'); }
+  function rupiah(n){ return rp(n); }
+
+  return new Promise(function(res){
+    var img=new Image();
+    img.onload=img.onerror=function(){ draw(img.naturalWidth?img:null); res(cv); };
+    var src=logoSrc(s); img.src = /^data:/.test(src) ? src : DEFAULT_LOGO;   // logo luar bisa memblokir gambar → pakai logo bawaan
+  });
+
+  function draw(logo){
+    // Kepala
+    box(0,0,W,250,0,'#2b1d14');
+    if (logo) g.drawImage(logo, P, 40, 170, 170);
+    var tx=logo?P+200:P;
+    txt(fit(s.nama_warkop||'Warkop', W-tx-P, 52, '800', FS), tx, 105, 52, '800', '#ffffff', 'left', FS);
+    txt('LAPORAN '+(from===to?'HARIAN':'PERIODE'), tx, 155, 32, '800', '#f0b35a');
+    txt(fit(label, W-tx-P, 28, '500'), tx, 198, 28, '500', '#e9dccb');
+    txt('Dibuat '+jam+' oleh '+A.me.nama, tx, 234, 24, '500', '#b9a894');
+    y=250;
+
+    // Saldo kas
+    if (L.saldo && !L.saldo.belum){
+      y+=36; box(P-16, y, W-2*P+32, 250, 24, '#f6efe4'); var y0=y;
+      y+=14; txt('💼 SALDO KAS', P+8, y+44, 34, '800', '#1d1410'); y+=44;
+      row((from===to?'Kas sebelumnya':'Saldo awal periode'), rupiah(L.saldo.sebelum), {indent:8});
+      row('Kas bersih '+(from===to?'hari ini':'periode ini'), (c.bersih>=0?'+':'')+rupiah(c.bersih), {indent:8, rcol:c.bersih<0?'#b03a2e':'#2f7d4f'});
+      y+=20; g.strokeStyle='#1d1410'; g.lineWidth=2; g.beginPath(); g.moveTo(P+8,y); g.lineTo(W-P-8,y); g.stroke();
+      y+=58; txt('SALDO KAS '+(from===to?'SEKARANG':'AKHIR'), P+8, y, 34, '800'); txt(rupiah(L.saldo.akhir), W-P-8, y, 46, '800', '#1d1410', 'right', FS);
+      y=y0+250;
+    }
+
+    // Ringkasan
+    section('💰 RINGKASAN '+(from===to?'HARI INI':'PERIODE'));
+    row('Penjualan lunas ('+c.trx+' transaksi)', rupiah(c.jual));
+    if (L.diskon) row('   sudah termasuk diskon', '−'+rupiah(L.diskon), {sz:26, lcol:'#6b5a4c', rcol:'#6b5a4c', gap:40});
+    L.masukLain.forEach(function(x){ row('Pemasukan lain: '+x.kat, rupiah(x.rp)); });
+    row('Total pengeluaran', '−'+rupiah(c.keluar), {rcol:'#b03a2e'});
+    y+=22; hr(y,'#1d1410');
+    row('KAS BERSIH', rupiah(c.bersih), {bold:true, sz:38, gap:58});
+    // metode
+    y+=30; var bw=(W-2*P-32)/3;
+    ['Cash','QRIS','Transfer'].forEach(function(m,i){ var x=P+i*(bw+16); box(x,y,bw,110,18,'#f6efe4');
+      txt(m, x+20, y+42, 26, '700', '#6b5a4c'); txt(fit(rupiah(c.met[m]||0), bw-40, 34, '800'), x+20, y+88, 34, '800'); });
+    y+=110;
+    if (c.belum){ y+=24; box(P,y,W-2*P,64,14,'#fbecd0'); txt(fit('⏳ '+c.belum+' pesanan belum dibayar ('+rupiah(c.belumRp)+') — belum dihitung', W-2*P-40, 26, '600'), P+20, y+42, 26, '600', '#7a5210'); y+=64; }
+
+    // Penjualan per menu
+    section('🍜 PENJUALAN PER MENU');
+    if (L.jual.length){
+      y+=46; txt('Menu', P, y, 24, '800', '#6b5a4c'); txt('Qty', W-P-260, y, 24, '800', '#6b5a4c', 'right'); txt('Jumlah', W-P, y, 24, '800', '#6b5a4c', 'right');
+      var tq=0, tr=0;
+      L.jual.forEach(function(x,i){ y+=48; if (i%2===0) box(P-10, y-34, W-2*P+20, 46, 8, '#faf6ef');
+        txt(fit(x.nama, W-2*P-330, 30, '500'), P, y, 30, '500'); txt(String(x.qty), W-P-260, y, 30, '700', '#1d1410', 'right'); txt(rupiah(x.rp).replace('Rp',''), W-P, y, 30, '700', '#1d1410', 'right'); tq+=x.qty; tr+=x.rp; });
+      y+=20; hr(y,'#1d1410'); y+=46; txt('TOTAL', P, y, 30, '800'); txt(String(tq), W-P-260, y, 30, '800', '#1d1410', 'right'); txt(rupiah(tr).replace('Rp',''), W-P, y, 30, '800', '#1d1410', 'right');
+      if (L.diskon){ y+=38; txt('*harga sebelum diskon', P, y, 22, '500', '#6b5a4c'); }
+    } else { y+=50; txt('Belum ada penjualan.', P, y, 28, '500', '#6b5a4c'); }
+
+    // Stok bahan
+    section('📦 STOK BAHAN');
+    if (L.stok.length){
+      var cx=[W-P-390, W-P-260, W-P-130, W-P];
+      y+=46; txt('Bahan', P, y, 24, '800', '#6b5a4c'); ['Awal','Masuk','Keluar','Sisa'].forEach(function(h,i){ txt(h, cx[i], y, 24, '800', '#6b5a4c', 'right'); });
+      L.stok.forEach(function(x,i){ var kel=x.terjual-x.batal, low=x.akhir<=x.minimal; y+=48;
+        if (low) box(P-10, y-34, W-2*P+20, 46, 8, '#fff1dc'); else if (i%2===0) box(P-10, y-34, W-2*P+20, 46, 8, '#faf6ef');
+        txt(fit((low?'⚠ ':'')+x.nama, cx[0]-P-110, 28, low?'700':'500'), P, y, 28, low?'700':'500', low?'#9a5a00':'#1d1410');
+        txt(fmtQty(x.awal), cx[0], y, 28, '500', '#1d1410', 'right'); txt(x.masuk?'+'+fmtQty(x.masuk):'-', cx[1], y, 28, '600', '#2f7d4f', 'right');
+        txt(kel?'−'+fmtQty(kel):'-', cx[2], y, 28, '600', '#b03a2e', 'right'); txt(fmtQty(x.akhir), cx[3], y, 30, '800', '#1d1410', 'right'); });
+      y+=40; txt('⚠ = stok menipis (di bawah batas minimal)', P, y, 22, '500', '#6b5a4c');
+    } else { y+=50; txt('Belum ada data stok.', P, y, 28, '500', '#6b5a4c'); }
+
+    // Pengeluaran
+    section('🧾 PENGELUARAN');
+    if (L.belanja.length || L.keluar.length){
+      L.belanja.forEach(function(b){ row('🛒 '+b.kategori+(from!==to?' ('+fmtTgl(b.tanggal)+')':''), rupiah(b.nominal), {bold:true, sz:30});
+        b.rincian.forEach(function(x){ row('• '+x.nama+' '+fmtQty(x.jumlah)+(x.satuan?' '+x.satuan:''), rupiah(x.harga), {sz:26, indent:24, gap:40, lcol:'#4a3a2e', rcol:'#4a3a2e'}); }); });
+      L.keluar.forEach(function(x){ row(x.kat+(x.n>1?' ('+x.n+'×)':'')+(x.cat.length?' — '+x.cat.slice(0,2).join('; '):''), rupiah(x.rp), {sz:30}); });
+      y+=22; hr(y,'#1d1410'); row('Total pengeluaran', rupiah(c.keluar), {bold:true, sz:32, gap:52});
+    } else { y+=50; txt('Tidak ada pengeluaran.', P, y, 28, '500', '#6b5a4c'); }
+
+    // Kaki
+    y+=70; hr(y,'#d9cdbb',true); y+=46;
+    txt((s.nama_warkop||'')+' · dibuat dari aplikasi Kasir Warkop', W/2, y, 22, '500', '#9b8a78', 'center');
+    y+=40;
+    // potong tinggi kanvas sesuai isi
+    var out=document.createElement('canvas'); out.width=W; out.height=Math.ceil(y);
+    out.getContext('2d').drawImage(cv,0,0); cv=out;
+  }
+}
+function bukaLaporanGambar(d, label, from, to){
+  var sh=openSheet('<h3 class="serif">🖼️ Laporan Gambar</h3><div id="lgw"><div class="loading">Membuat gambar…</div></div>');
+  laporanGambar(d, label, from, to).then(function(cv){
+    var nama='Laporan-'+(A.data.settings.nama_warkop||'Warkop').replace(/\W+/g,'-')+'-'+(from===to?from:from+'_sd_'+to)+'.png';
+    cv.toBlob(function(blob){
+      var url=URL.createObjectURL(blob), file=null;
+      try { file=new File([blob], nama, {type:'image/png'}); } catch(e){}
+      var bisaShare = !!(file && navigator.canShare && navigator.canShare({files:[file]}));
+      $('#lgw',sh).innerHTML='<img src="'+url+'" class="lgimg" alt="Laporan">' +
+        '<div class="lapbtn">'+(bisaShare?'<button class="btn" id="lgs" style="background:#25a244">📤 Kirim ke WhatsApp / Bagikan</button>':'')+
+        '<a class="btn '+(bisaShare?'ghost':'')+'" id="lgd" href="'+url+'" download="'+nama+'">💾 Simpan ke HP (Galeri / Download)</a></div>' +
+        '<div class="hint" style="text-align:left">'+(bisaShare?'Tekan <b>Kirim</b> → pilih <b>WhatsApp</b> → pilih kontak bos.':'Simpan dulu, lalu kirim gambarnya lewat WhatsApp seperti mengirim foto biasa.')+' Bisa juga <b>tekan lama gambar</b> di atas untuk menyimpan.</div>';
+      if (bisaShare) $('#lgs',sh).onclick=function(){ navigator.share({files:[file], title:'Laporan '+label, text:'Laporan '+(A.data.settings.nama_warkop||'')+' — '+label}).catch(function(){}); };
+    }, 'image/png');
+  });
+}
 
 /* ---------- Pengaturan diskon ---------- */
 function diskonSettingsHtml(){
