@@ -479,6 +479,34 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 #view .hscroll .ibox{flex:0 0 92px}
 @media(min-width:560px){#view .items{grid-template-columns:repeat(6,1fr)}}
 
+/* ---------- Hubungkan menu ↔ stok ---------- */
+.linkbtn2{background:var(--card);color:var(--ink);border:2px solid var(--ok);margin-bottom:12px;display:flex;flex-direction:column;line-height:1.3;padding:12px}
+.linkbtn2 small{font-size:11px;color:var(--muted);font-weight:600}
+.linkbtn2 .cnt{display:inline-block;background:#f6d6d1;color:var(--bad);border-radius:99px;padding:1px 8px;font-size:11.5px;margin-left:4px}
+.linkbtn2 .cnt.ok{background:var(--ok-soft);color:var(--ok)}
+.hrow{display:grid;grid-template-columns:1fr 1.25fr;gap:8px;align-items:center;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:8px 10px;margin-bottom:6px}
+.hrow.sar{background:#fffbea;border-color:#f0d58a}
+.hrow.chg{border-left:4px solid var(--ok)}
+.hrow .hn b{font-size:13.5px;display:block}
+.hrow .hn small{display:block;font-size:11px;color:var(--muted)}
+.hrow select{padding:8px 6px;font-size:13px}
+.sarantag{display:inline-block;background:#f7e7b4;color:#6b4e09;font-size:10.5px;font-weight:800;border-radius:99px;padding:1px 7px;margin-left:4px;vertical-align:middle}
+.cmh{margin:14px 0 6px;font-size:15px}
+.cmrow{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px;margin-bottom:6px}
+.cmrow.warn{background:var(--warn-soft)}
+.cmt b{font-size:14px}.cmt small{display:block;color:var(--muted);font-size:11.5px}
+.cmwarn{background:var(--warn-soft);border-radius:8px;padding:6px 8px;font-size:12px;margin-top:6px}
+.cmok{background:var(--ok-soft);color:#1f5a37;border-radius:12px;padding:10px;font-size:13px}
+.qrow.b2{grid-template-columns:1fr 1fr 38px}
+.qrow.b2>[data-f="nama"]{grid-column:1/3;grid-row:1}
+.qrow.b2>[data-del]{grid-column:3;grid-row:1}
+.qrow.b2>[data-f="satuan"]{grid-column:1;grid-row:2}
+.qrow.b2>[data-f="stok"]{grid-column:2;grid-row:2}
+.qrow.b2>[data-f="harga"]{grid-column:1/3;grid-row:3}
+.qrow.b2>.qi{grid-column:1/4;grid-row:4}
+.qinfo{font-size:11.5px;color:var(--muted);margin-top:2px}
+.qinfo.ok{color:var(--ok);font-weight:700}.qinfo.warn{color:#7a5210;font-weight:700}
+
 /* ---------- Struk ---------- */
 #printArea{display:none}
 .struk{font-family:"Courier New",Courier,monospace;color:#000;background:#fff;font-size:12px;line-height:1.35;margin:0 auto;padding:6px 4px}
@@ -1307,7 +1335,7 @@ function tabMenu(){
   var cats=[]; list.forEach(function(m){ if(cats.indexOf(m.kategori)<0) cats.push(m.kategori); });
   $('#tab').innerHTML =
     (isOwner() ? '<div class="addrow"><button class="btn bigadd" id="mquick">⚡ Tambah Cepat<small>banyak menu sekaligus</small></button><button class="btn ghost bigadd" id="madd">＋ Satu Menu<small>dengan foto & detail</small></button></div>' +
-      '<button class="btn block fotobtn" id="mfoto">📷 Foto & ⭐ Best Seller <small>pasang foto menu dengan cepat</small></button>' : '') +
+      '<button class="btn block fotobtn" id="mfoto">📷 Foto & ⭐ Best Seller <small>pasang foto menu dengan cepat</small></button>' + linkBtnHtml('mlink') : '') +
     '<label class="search" style="margin-bottom:10px"><span>🔎</span><input id="mq" type="search" placeholder="Cari menu…" value="'+esc(A.mq)+'"></label>' +
     (isOwner() ? '<div class="howto"><b>Cara pakai:</b><ol><li><b>＋ Tambah Menu Baru</b> → isi nama, harga, pilih kategori (atau buat kategori baru) → Simpan</li><li>Stok dihitung dari <b>bahan</b> (tab <b>Stok</b>). Hubungkan menu ke bahannya lewat ✏️ → <b>Bahan yang dipakai</b></li><li>✏️ = ubah nama, harga, foto, atau hapus menu</li><li>Tombol hijau = tandai tersedia / habis secara manual</li></ol></div>' : '<div class="howto">Tombol hijau = tandai tersedia / habis. Stok bahan diatur di tab <b>Stok</b>. Menambah/mengubah menu hanya bisa oleh Owner.</div>') +
     (list.length ? cats.map(function(c){
@@ -1324,6 +1352,7 @@ function tabMenu(){
   if ($('#madd')) $('#madd').onclick=function(){ editItem(null); };
   if ($('#mquick')) $('#mquick').onclick=quickAddMenu;
   if ($('#mfoto')) $('#mfoto').onclick=fotoManager;
+  if ($('#mlink')) $('#mlink').onclick=cocokkanStokMenu;
   $('#tab').onclick=function(e){ var b=e.target.closest('[data-edit]'); if(b) editItem(b.dataset.edit); var k=e.target.closest('[data-stok]'); if(k) editStock(k.dataset.stok); };
   if ($('#mclear')) $('#mclear').onclick=function(){
     confirmBox('Semua menu akan dihapus, termasuk menu contoh. Riwayat pesanan tetap aman. Lanjutkan?','Ya, kosongkan').then(function(ok){ if(!ok) return;
@@ -1463,7 +1492,8 @@ function tabStok(){
   var tipis=(A.data.bahan||[]).filter(function(b){ return b.stok<=b.minimal; }).length;
   $('#tab').innerHTML =
     '<div class="stats"><div class="stat"><small>JENIS BAHAN</small><b>'+(A.data.bahan||[]).length+'</b></div><div class="stat"><small>MENIPIS / HABIS</small><b style="color:'+(tipis?'var(--bad)':'var(--ok)')+'">'+tipis+'</b></div>'+(isOwner()?'<div class="stat"><small>LAPORAN</small><button class="btn sm" id="slap" style="margin-top:4px;padding:6px 10px">📄 Buka</button></div>':'<div class="stat"><small>STOK</small><b style="font-size:14px">Bahan</b></div>')+'</div>' +
-    (isOwner() ? '<div class="addrow"><button class="btn bigadd" id="squick">⚡ Tambah Cepat<small>banyak bahan sekaligus</small></button><button class="btn ghost bigadd" id="sadd">＋ Satu Bahan</button></div>' : '') +
+    (isOwner() ? '<div class="addrow"><button class="btn bigadd" id="squick">⚡ Tambah Cepat<small>banyak stok sekaligus</small></button><button class="btn ghost bigadd" id="sadd">＋ Satu Stok</button></div>' +
+      linkBtnHtml('slink') : '') +
     '<label class="search" style="margin-bottom:10px"><span>🔎</span><input id="sq" type="search" placeholder="Cari bahan…" value="'+esc(S.q)+'"></label>' +
     '<div class="howto">Stok bahan berkurang <b>otomatis</b> saat ada pesanan (sesuai resep di tiap menu), dan kembali jika pesanan dibatalkan.<br>' +
       '<b>＋ Masuk</b> = barang datang / beli stok. '+(isOwner()?'<b>Koreksi</b> = samakan dengan jumlah asli setelah dihitung.':'')+'</div>' +
@@ -1478,6 +1508,7 @@ function tabStok(){
   $('#sq').addEventListener('input', function(e){ S.q=e.target.value; var p=e.target.selectionStart; tabStok(); var i=$('#sq'); i.focus(); try{ i.setSelectionRange(p,p);}catch(x){} });
   if ($('#sadd')) $('#sadd').onclick=function(){ editBahan(null); };
   if ($('#squick')) $('#squick').onclick=quickAddBahan;
+  if ($('#slink')) $('#slink').onclick=cocokkanStokMenu;
   if ($('#slap')) $('#slap').onclick=function(){ openLaporanHariIni(); };
   $('#tab').onclick=function(e){ var t;
     if ((t=e.target.closest('[data-in]'))) stokForm(t.dataset.in,'Masuk');
@@ -1858,7 +1889,7 @@ function quickAddMenu(){
     '<button class="btn block" id="qs">Simpan Semua</button>');
   function draw(){
     $('#qr',sh).innerHTML = rows.map(function(r,i){
-      var ada = r.nama && bahanByName(r.nama);
+      var ada = r.nama && (bahanMiripDengan(r.nama)[0]||{}).b;
       return '<div class="qrow ph" data-i="'+i+'"><label class="qfoto'+(r.up?' up':'')+'">'+(r.foto?'<img src="'+esc(r.foto)+'" alt="">':'<span>'+(r.up?'⏳':'📷')+'<small>'+(r.up?'unggah':'foto')+'</small></span>')+'<input type="file" accept="image/*" data-foto="'+i+'" hidden></label>' +
         '<input class="input" data-f="nama" maxlength="80" placeholder="Nama menu" value="'+esc(r.nama)+'">' +
         '<input class="input" data-f="harga" inputmode="numeric" placeholder="Harga (Rp)" value="'+fmtNum(r.harga)+'">' +
@@ -1903,7 +1934,9 @@ function quickAddMenu(){
     if (!list.length){ toast('Isi minimal 1 nama menu',true); return; }
     var noHarga=list.filter(function(r){ return !r.harga; });
     if (noHarga.length){ toast('Harga belum diisi: '+noHarga.map(function(r){ return r.nama; }).slice(0,3).join(', ')+(noHarga.length>3?'…':''),true); return; }
-    var dup={}; for (var i=0;i<list.length;i++){ var k=list[i].nama.toLowerCase(); if(dup[k]){ toast('Nama dobel: '+list[i].nama,true); return; } dup[k]=1; }
+    var dup={}; for (var i=0;i<list.length;i++){ var k=normFull(list[i].nama); if(dup[k]){ toast('Nama dobel: '+list[i].nama,true); return; } dup[k]=1; }
+    var sudahAda=list.filter(function(r){ return menuMiripDengan(r.nama).some(function(x){ return x.s>=0.95; }); });
+    if (sudahAda.length){ toast('Menu sudah ada (nama sama/mirip): '+sudahAda.map(function(r){ return r.nama; }).slice(0,3).join(', ')+'. Hapus barisnya agar tidak dobel.',true); return; }
     var btn=this; btn.disabled=true; A.lastCat=kat;
     var prog=$('#qp',sh); prog.classList.remove('hidden');
     var ok=0, gagal=[];
@@ -1920,7 +1953,7 @@ function quickAddMenu(){
       prog.innerHTML = '⏳ Menyimpan '+(i+1)+' dari '+list.length+': <b>'+esc(r.nama)+'</b>…<div class="bar"><i style="width:'+Math.round(i/list.length*100)+'%"></i></div>';
       var pBahan = Promise.resolve(null);
       if (r.stok!=='' && r.stok!==undefined){
-        var ada=bahanByName(r.nama);
+        var ada=(bahanMiripDengan(r.nama)[0]||{}).b;
         pBahan = ada ? Promise.resolve(ada.id) : api('adminSaveBahan', A.pin, {nama:r.nama, satuan:'porsi', minimal:3, stokAwal:parseInt(r.stok,10)||0})
           .then(function(lst){ A.data.bahan=lst; var b=bahanByName(r.nama); return b?b.id:null; });
       }
@@ -1986,59 +2019,88 @@ function fotoManager(){
   var obs=new MutationObserver(function(){ if(!document.body.contains(sh)){ obs.disconnect(); if(A.tab==='menu') tabMenu(); } });
   obs.observe(document.body,{childList:true});
 }
+function linkBtnHtml(id){
+  var n=A.data.menu.filter(function(m){ return !(m.resep||[]).length; }).length;
+  return '<button class="btn block linkbtn2" id="'+id+'">🔗 Hubungkan Menu ↔ Stok'+(n?' <span class="cnt">'+n+' menu belum</span>':' <span class="cnt ok">semua terhubung</span>')+'<small>stok berkurang otomatis saat menu terjual</small></button>';
+}
 function bahanByName(n){ n=String(n||'').trim().toLowerCase(); return (A.data.bahan||[]).filter(function(b){ return b.nama.toLowerCase()===n; })[0]; }
 
 function quickAddBahan(){
-  var rows=[{nama:'',satuan:'bungkus',stok:''},{nama:'',satuan:'bungkus',stok:''},{nama:'',satuan:'bungkus',stok:''}];
-  var sh=openSheet('<h3 class="serif">⚡ Tambah Cepat Bahan / Stok</h3>' +
-    '<p class="muted" style="margin:0 0 8px;font-size:13px">Isi banyak bahan sekaligus beserta jumlah stok yang ada sekarang.</p>' +
+  var blank=function(){ return {nama:'',satuan:'bungkus',stok:'',harga:''}; };
+  var rows=[blank(),blank(),blank()];
+  var cats=[]; A.data.menu.forEach(function(x){ if(cats.indexOf(x.kategori)<0) cats.push(x.kategori); });
+  var sh=openSheet('<h3 class="serif">⚡ Tambah Cepat Stok</h3>' +
+    '<p class="muted" style="margin:0 0 8px;font-size:13px">Isi banyak stok sekaligus. Isi <b>harga jual</b> jika ingin langsung dijadikan menu — nama yang mirip dengan menu lama otomatis <b>dihubungkan</b>, tidak dibuat dobel.</p>' +
     '<div class="field"><span>ISI CEPAT DARI TEMPLATE (opsional)</span><div class="catchips" id="bt">'+Object.keys(TEMPLATE_BAHAN).map(function(k){ return '<button type="button" data-t="'+esc(k)+'">'+esc(k)+'</button>'; }).join('')+'</div></div>' +
-    '<div class="field"><span>DAFTAR BAHAN</span><div class="qhead b"><span>Nama bahan</span><span>Satuan</span><span>Stok sekarang</span><span></span></div><div id="br"></div>' +
+    '<label class="field"><span>MENU BARU MASUK KATEGORI (jika harga jual diisi)</span><select class="input" id="bk">'+cats.map(function(c){ return '<option value="'+esc(c)+'">'+esc(c)+'</option>'; }).join('')+'<option value="__new"'+(cats.length?'':' selected')+'>＋ Kategori baru…</option></select>' +
+      '<input class="input'+(cats.length?' hidden':'')+'" id="bkn" maxlength="40" placeholder="Nama kategori baru" style="margin-top:6px"></label>' +
+    '<div class="field"><span>DAFTAR STOK</span><div id="br"></div>' +
       '<button type="button" class="btn ghost sm" id="badd" style="margin-top:6px">＋ Tambah baris</button></div>' +
-    '<datalist id="bsatl">'+['bungkus','pcs','porsi','sachet','renceng','butir','botol','kg','liter','tabung'].map(function(x){ return '<option value="'+x+'">'; }).join('')+'</datalist>' +
+    '<datalist id="bsatl">'+['bungkus','pcs','porsi','sachet','renceng','butir','botol','gelas','kg','liter','tabung'].map(function(x){ return '<option value="'+x+'">'; }).join('')+'</datalist>' +
     '<div class="qprog hidden" id="bp"></div>' +
-    '<button class="btn block" id="bs">Simpan Semua</button>' +
-    '<div class="hint" style="text-align:left">Setelah itu hubungkan ke menu: tab <b>Menu</b> → ✏️ → <b>Bahan yang dipakai</b>.</div>');
+    '<button class="btn block" id="bs">Simpan Semua</button>');
+  function info(r){
+    if (!String(r.nama).trim()) return '';
+    var sb=bahanMiripDengan(r.nama)[0];
+    if (sb) return '<div class="qinfo warn">⚠️ Stok "'+esc(sb.b.nama)+'" sudah ada — baris ini dilewati. Tambah jumlahnya lewat <b>＋ Masuk</b>.</div>';
+    var sm=menuMiripDengan(r.nama)[0];
+    if (sm) return '<div class="qinfo ok">🔗 Akan dihubungkan ke menu <b>"'+esc(sm.m.nama)+'"</b> yang sudah ada</div>';
+    var saran=A.data.menu.map(function(m){ return {m:m,s:mirip(r.nama,m.nama)}; }).filter(function(x){ return x.s>=0.6; }).sort(function(a,c){ return c.s-a.s; })[0];
+    if (r.harga) return '<div class="qinfo ok">＋ Menu baru "'+esc(String(r.nama).trim())+'" '+rp(r.harga)+'</div>' + (saran?'<div class="qinfo">ℹ️ Mirip menu "'+esc(saran.m.nama)+'" — hubungkan nanti lewat 🔗 Hubungkan Menu ↔ Stok jika memang sama</div>':'');
+    return saran ? '<div class="qinfo">ℹ️ Mirip menu "'+esc(saran.m.nama)+'" — bisa dihubungkan lewat 🔗 Hubungkan Menu ↔ Stok</div>' : '<div class="qinfo">Hanya stok (isi harga jual jika ingin jadi menu)</div>';
+  }
   function draw(){
     $('#br',sh).innerHTML = rows.map(function(r,i){
-      var ada=r.nama && bahanByName(r.nama);
-      return '<div class="qrow b" data-i="'+i+'"><input class="input" data-f="nama" maxlength="60" placeholder="Nama bahan" value="'+esc(r.nama)+'"'+(ada?' style="border-color:var(--warn)"':'')+'>' +
+      return '<div class="qrow b2" data-i="'+i+'"><input class="input" data-f="nama" maxlength="60" placeholder="Nama stok, cth: Nutrisari Jeruk" value="'+esc(r.nama)+'">' +
         '<input class="input" data-f="satuan" list="bsatl" maxlength="15" placeholder="Satuan" value="'+esc(r.satuan)+'">' +
         '<input class="input" data-f="stok" inputmode="numeric" placeholder="Stok sekarang" value="'+esc(r.stok)+'">' +
-        '<button type="button" class="icon-btn" data-del="'+i+'">✕</button></div>';
+        '<input class="input" data-f="harga" inputmode="numeric" placeholder="Harga jual (opsional)" value="'+fmtNum(r.harga)+'">' +
+        '<button type="button" class="icon-btn" data-del="'+i+'">✕</button><div class="qi" data-qi="'+i+'">'+info(r)+'</div></div>';
     }).join('');
   }
   draw();
+  $('#bk',sh).onchange=function(){ var n=this.value==='__new'; $('#bkn',sh).classList.toggle('hidden',!n); if(n) $('#bkn',sh).focus(); };
   $('#bt',sh).onclick=function(e){ var b=e.target.closest('[data-t]'); if(!b) return; var k=b.dataset.t;
     var sat = /sachet/i.test(k) ? 'sachet' : /Indomie/.test(k) ? 'bungkus' : 'pcs';
-    var names=TEMPLATE_BAHAN[k].filter(function(n){ return !bahanByName(n); });
-    rows = rows.filter(function(r){ return r.nama; }).concat(names.map(function(n){ return {nama:n,satuan:/Telur/.test(n)?'butir':/Gas/.test(n)?'tabung':/Gula|Kentang/.test(n)?'kg':/galon/i.test(n)?'galon':sat,stok:''}; }));
-    if (!rows.length) rows=[{nama:'',satuan:'bungkus',stok:''}];
-    draw(); toast(names.length+' bahan ditambahkan ke daftar'+(names.length<TEMPLATE_BAHAN[k].length?' (yang sudah ada dilewati)':''));
+    var names=TEMPLATE_BAHAN[k].filter(function(n){ return !bahanMiripDengan(n).length; });
+    rows = rows.filter(function(r){ return r.nama; }).concat(names.map(function(n){ return {nama:n,satuan:/Telur/.test(n)?'butir':/Gas/.test(n)?'tabung':/Gula|Kentang/.test(n)?'kg':/galon/i.test(n)?'galon':sat,stok:'',harga:''}; }));
+    if (!rows.length) rows=[blank()];
+    draw(); toast(names.length+' stok ditambahkan ke daftar'+(names.length<TEMPLATE_BAHAN[k].length?' (yang sudah ada dilewati)':''));
   };
-  $('#badd',sh).onclick=function(){ rows.push({nama:'',satuan:'bungkus',stok:''}); draw(); var ins=sh.querySelectorAll('#br [data-f="nama"]'); ins[ins.length-1].focus(); };
+  $('#badd',sh).onclick=function(){ rows.push(blank()); draw(); var ins=sh.querySelectorAll('#br [data-f="nama"]'); ins[ins.length-1].focus(); };
   $('#br',sh).addEventListener('input', function(e){ var row=e.target.closest('[data-i]'); var f=e.target.dataset.f; if(!row || !f) return; var r=rows[+row.dataset.i];
-    if (f==='stok'){ r.stok=e.target.value.replace(/\D/g,''); e.target.value=r.stok; } else r[f]=e.target.value; });
-  $('#br',sh).addEventListener('click', function(e){ var t=e.target.closest('[data-del]'); if(!t) return; rows.splice(+t.dataset.del,1); if(!rows.length) rows.push({nama:'',satuan:'bungkus',stok:''}); draw(); });
+    if (f==='stok'){ r.stok=e.target.value.replace(/\D/g,''); e.target.value=r.stok; }
+    else if (f==='harga'){ e.target.value=fmtNum(e.target.value); r.harga=e.target.value.replace(/\D/g,''); }
+    else r[f]=e.target.value;
+    if (f==='nama' || f==='harga'){ var q=row.querySelector('[data-qi]'); if(q) q.innerHTML=info(r); } });
+  $('#br',sh).addEventListener('click', function(e){ var t=e.target.closest('[data-del]'); if(!t) return; rows.splice(+t.dataset.del,1); if(!rows.length) rows.push(blank()); draw(); });
   $('#bs',sh).onclick=function(){
-    var list=rows.map(function(r){ return {nama:String(r.nama).trim(), satuan:String(r.satuan||'pcs').trim()||'pcs', stok:parseInt(r.stok,10)||0}; }).filter(function(r){ return r.nama; });
-    if (!list.length){ toast('Isi minimal 1 nama bahan',true); return; }
-    var sudah=list.filter(function(r){ return bahanByName(r.nama); });
-    if (sudah.length){ toast('Sudah ada: '+sudah.map(function(r){ return r.nama; }).join(', ')+'. Hapus barisnya atau pakai ＋ Masuk di tab Stok.',true); return; }
-    var dup={}; for (var i=0;i<list.length;i++){ var k=list[i].nama.toLowerCase(); if(dup[k]){ toast('Nama dobel: '+list[i].nama,true); return; } dup[k]=1; }
-    var btn=this; btn.disabled=true; var prog=$('#bp',sh); prog.classList.remove('hidden'); var ok=0, gagal=[];
+    var list=rows.map(function(r){ return {nama:String(r.nama).trim(), satuan:String(r.satuan||'pcs').trim()||'pcs', stok:parseInt(r.stok,10)||0, harga:parseInt(r.harga,10)||0}; }).filter(function(r){ return r.nama; });
+    if (!list.length){ toast('Isi minimal 1 nama stok',true); return; }
+    var seen={}; for (var i=0;i<list.length;i++){ var k=normFull(list[i].nama); if(seen[k]){ toast('Nama dobel di daftar: '+list[i].nama,true); return; } seen[k]=1; }
+    var kat = $('#bk',sh).value==='__new' ? $('#bkn',sh).value.trim() : $('#bk',sh).value;
+    if (list.some(function(r){ return r.harga && !bahanMiripDengan(r.nama).length && !menuMiripDengan(r.nama).length; }) && !kat){ toast('Pilih / isi kategori untuk menu baru',true); return; }
+    var btn=this; btn.disabled=true; var prog=$('#bp',sh); prog.classList.remove('hidden');
+    var hasil={stok:0, lewat:[], link:0, menu:0, gagal:[]};
     function step(i){
       if (i>=list.length){
-        prog.innerHTML='✅ <b>'+ok+' bahan</b> tersimpan'+(gagal.length?'<br>⚠️ Gagal: '+gagal.map(esc).join(', '):'');
-        if (A.tab==='stok') tabStok();
-        if (!gagal.length) setTimeout(function(){ closeSheet(); toast(ok+' bahan baru tersimpan ✓'); }, 900);
-        else { btn.disabled=false; rows=list.filter(function(r){ return gagal.indexOf(r.nama)>=0; }).map(function(r){ return {nama:r.nama,satuan:r.satuan,stok:String(r.stok)}; }); draw(); }
+        prog.innerHTML='✅ <b>'+hasil.stok+'</b> stok baru'+(hasil.menu?' · <b>'+hasil.menu+'</b> menu baru':'')+(hasil.link?' · <b>'+hasil.link+'</b> dihubungkan ke menu lama':'') +
+          (hasil.lewat.length?'<br>⏭️ Dilewati (sudah ada): '+hasil.lewat.map(esc).join(', '):'') + (hasil.gagal.length?'<br>⚠️ Gagal: '+hasil.gagal.map(esc).join(', ')+' — coba lagi':'');
+        api('adminGetData', A.pin).then(function(d){ A.data.menu=d.menu; A.data.bahan=d.bahan||[]; if (A.tab==='stok') tabStok(); });
+        btn.disabled=false; btn.textContent='Tutup'; btn.onclick=function(){ closeSheet(); };
         return;
       }
       var r=list[i];
-      prog.innerHTML='⏳ Menyimpan '+(i+1)+' dari '+list.length+': <b>'+esc(r.nama)+'</b>…<div class="bar"><i style="width:'+Math.round(i/list.length*100)+'%"></i></div>';
-      api('adminSaveBahan', A.pin, {nama:r.nama, satuan:r.satuan, minimal:5, stokAwal:r.stok}).then(function(lst){ A.data.bahan=lst; ok++; step(i+1); })
-        .catch(function(){ gagal.push(r.nama); step(i+1); });
+      prog.innerHTML='⏳ '+(i+1)+' dari '+list.length+': <b>'+esc(r.nama)+'</b>…<div class="bar"><i style="width:'+Math.round(i/list.length*100)+'%"></i></div>';
+      if (bahanMiripDengan(r.nama).length){ hasil.lewat.push(r.nama); step(i+1); return; }
+      api('adminSaveBahan', A.pin, {nama:r.nama, satuan:r.satuan, minimal:5, stokAwal:r.stok}).then(function(lst){
+        A.data.bahan=lst; hasil.stok++;
+        var b=lst.filter(function(x){ return normFull(x.nama)===normFull(r.nama); })[0]; if(!b) return;
+        var sm=menuMiripDengan(r.nama)[0];
+        if (sm){ if (menuPakaiBahan(sm.m,b.id)) return; return hubungkan(sm.m, b.id).then(function(){ hasil.link++; }); }
+        if (r.harga) return api('adminSaveItem', A.pin, {id:'', nama:r.nama, kategori:kat, harga:r.harga, deskripsi:'', foto:'', tersedia:true, bestSeller:false, urutan:A.data.menu.length+1, stok:'', resep:[{b:b.id,q:1,alt:[]}]})
+          .then(function(menu){ A.data.menu=menu; hasil.menu++; });
+      }).then(function(){ step(i+1); }).catch(function(){ hasil.gagal.push(r.nama); step(i+1); });
     }
     step(0);
   };
@@ -2159,6 +2221,143 @@ function posOpen(){
       toast(/ditutup/.test(e.message) ? 'Pemesanan sedang ditutup di Pengaturan. Aktifkan "Terima pesanan" dulu.' : e.message, true);
     });
   }
+}
+
+/* ---------- Pencocokan nama Stok ↔ Menu (tahan beda tulisan) ---------- */
+/* "Good Day", "goodday", "GOOD-DAY" → sama. Huruf dobel diringkas: "Goodday" = "Goday". */
+function normName(s){
+  return String(s||'').toLowerCase()
+    .replace(/\b(es|ice|panas|hot|dingin|cold|gelas|cup|sachet|saset|bungkus|pcs|renceng|dus)\b/g,' ')
+    .replace(/[^a-z0-9]/g,'').replace(/(.)\1+/g,'$1');
+}
+function normFull(s){ return String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'').replace(/(.)\1+/g,'$1'); }
+function levDist(a,b){
+  if (a===b) return 0; var m=a.length, n=b.length; if(!m) return n; if(!n) return m;
+  var prev=[], cur=[]; for (var j=0;j<=n;j++) prev[j]=j;
+  for (var i=1;i<=m;i++){ cur=[i]; for (var k=1;k<=n;k++){ cur[k]=Math.min(prev[k]+1, cur[k-1]+1, prev[k-1]+(a[i-1]===b[k-1]?0:1)); } prev=cur; }
+  return prev[n];
+}
+/* Kemiripan 0..1 */
+function mirip(a,b){
+  var x=normName(a), y=normName(b), fx=normFull(a), fy=normFull(b);
+  if (!fx || !fy) return 0;
+  if (fx===fy) return 1;
+  if (x && y && x===y) return 0.95;
+  var s=0;
+  if (x && y && Math.min(x.length,y.length)>=4 && (x.indexOf(y)>=0 || y.indexOf(x)>=0)) s=0.85;
+  var L=Math.max(x.length,y.length)||1; s=Math.max(s, 1-levDist(x,y)/L);
+  return s;
+}
+function menuPakaiBahan(m, bid){ return (m.resep||[]).some(function(r){ return r.b===bid || (r.alt||[]).indexOf(bid)>=0; }); }
+function saranMenuUntukBahan(b, limit){
+  return A.data.menu.filter(function(m){ return !menuPakaiBahan(m,b.id); })
+    .map(function(m){ return {m:m, s:mirip(b.nama, m.nama)}; }).filter(function(x){ return x.s>=0.6; })
+    .sort(function(a,c){ return c.s-a.s; }).slice(0, limit||4);
+}
+function saranBahanUntukMenu(m, limit){
+  return (A.data.bahan||[]).filter(function(b){ return !menuPakaiBahan(m,b.id); })
+    .map(function(b){ return {b:b, s:mirip(b.nama, m.nama)}; }).filter(function(x){ return x.s>=0.6; })
+    .sort(function(a,c){ return c.s-a.s; }).slice(0, limit||3);
+}
+function menuMiripDengan(nama, kecualiId){
+  return A.data.menu.filter(function(m){ return m.id!==kecualiId; }).map(function(m){ return {m:m, s:mirip(nama, m.nama)}; })
+    .filter(function(x){ return x.s>=0.9; }).sort(function(a,c){ return c.s-a.s; });
+}
+function bahanMiripDengan(nama){
+  return (A.data.bahan||[]).map(function(b){ return {b:b, s:mirip(nama, b.nama)}; }).filter(function(x){ return x.s>=0.9; }).sort(function(a,c){ return c.s-a.s; });
+}
+function hubungkan(m, bid){
+  var it=JSON.parse(JSON.stringify(m)); it.resep=(it.resep||[]).concat([{b:bid, q:1, alt:[]}]);
+  return api('adminSaveItem', A.pin, it).then(function(menu){ A.data.menu=menu; });
+}
+
+/* Alat: Hubungkan Menu ↔ Stok (satu halaman, simpan sekaligus) */
+function miripMenu(bnama, m){ return Math.max(mirip(bnama, m.nama), mirip(bnama, m.kategori+' '+m.nama)*0.97); }
+function cocokkanStokMenu(){
+  var bahan=A.data.bahan||[];
+  if (!bahan.length){ toast('Belum ada stok. Isi dulu di tab Stok.',true); return; }
+  var cats=[]; A.data.menu.forEach(function(x){ if(cats.indexOf(x.kategori)<0) cats.push(x.kategori); });
+  var pilih={}, saran={};
+  A.data.menu.forEach(function(m){
+    var r=m.resep||[];
+    if (r.length){ pilih[m.id]=r[0].b; return; }
+    var best=bahan.map(function(b){ return {b:b, s:miripMenu(b.nama, m)}; }).sort(function(a,c){ return c.s-a.s; })[0];
+    if (best && best.s>=0.75){ pilih[m.id]=best.b.id; saran[m.id]=1; } else pilih[m.id]='';
+  });
+  var filter='belum';
+  var sh=openSheet('<h3 class="serif">🔗 Hubungkan Menu ↔ Stok</h3>' +
+    '<p class="muted" style="margin:0 0 6px;font-size:13px">Pilih stok yang dipakai setiap menu. Tebakan otomatis ditandai <span class="sarantag">saran</span> — periksa, ganti bila kurang tepat, lalu <b>Simpan semua</b>.</p>' +
+    '<div class="seg" id="hf"><button data-v="belum" class="on">Belum terhubung</button><button data-v="semua">Semua menu</button><button data-v="stok">Stok tanpa menu</button></div>' +
+    '<div id="hl"></div>' +
+    '<div class="qprog hidden" id="hp"></div>' +
+    '<button class="btn block" id="hs" style="position:sticky;bottom:0">Simpan semua</button>');
+  function opts(sel){ return '<option value="">— tidak pakai stok —</option>'+bahan.map(function(b){ return '<option value="'+b.id+'"'+(b.id===sel?' selected':'')+'>'+esc(b.nama)+' ('+fmtQty(b.stok)+')</option>'; }).join(''); }
+  function berubah(m){ var cur=(m.resep||[])[0]; return (cur?cur.b:'') !== (pilih[m.id]||''); }
+  function draw(){
+    var nUbah=A.data.menu.filter(berubah).length;
+    $('#hs',sh).textContent = nUbah ? 'Simpan semua ('+nUbah+' perubahan)' : 'Tidak ada perubahan';
+    $('#hs',sh).disabled = !nUbah;
+    if (filter==='stok'){ drawStok(); return; }
+    var list=A.data.menu.filter(function(m){ return filter==='semua' || !(m.resep||[]).length; });
+    var cs=[]; list.forEach(function(m){ if(cs.indexOf(m.kategori)<0) cs.push(m.kategori); });
+    $('#hl',sh).innerHTML = list.length ? cs.map(function(c){
+      return '<h4 class="cmh">'+catIcon(c)+' '+esc(c)+'</h4>' + list.filter(function(m){ return m.kategori===c; }).map(function(m){
+        var multi=(m.resep||[]).length>1;
+        return '<div class="hrow'+(saran[m.id]&&pilih[m.id]?' sar':'')+(berubah(m)?' chg':'')+'"><div class="hn"><b>'+esc(m.nama)+'</b>'+(saran[m.id]&&pilih[m.id]?'<span class="sarantag">saran</span>':'')+(multi?'<small>+'+((m.resep.length)-1)+' bahan lain (atur di ✏️)</small>':'')+'</div>' +
+          '<select class="input" data-hm="'+m.id+'">'+opts(pilih[m.id])+'</select></div>';
+      }).join('');
+    }).join('') : '<div class="cmok">✅ Semua menu sudah terhubung ke stok. Pilih "Semua menu" untuk mengubah.</div>';
+  }
+  function drawStok(){
+    var dipakai={}; A.data.menu.forEach(function(m){ var b=pilih[m.id]; if(b) dipakai[b]=1; (m.resep||[]).forEach(function(r){ dipakai[r.b]=1; (r.alt||[]).forEach(function(a){ dipakai[a]=1; }); }); });
+    var sisa=bahan.filter(function(b){ return !dipakai[b.id]; });
+    $('#hl',sh).innerHTML = '<div class="hint" style="text-align:left;margin:4px 0 8px">Stok ini belum dipakai menu mana pun. Buat menunya di sini — cukup isi harga, foto bisa menyusul.</div>' +
+      (sisa.length ? sisa.map(function(b){
+        var mm=menuMiripDengan(b.nama);
+        return '<div class="cmrow"><div class="cmt"><b>'+esc(b.nama)+'</b><small>stok '+fmtQty(b.stok)+' '+esc(b.satuan)+'</small></div>' +
+          (mm.length?'<div class="cmwarn">⚠️ Mirip menu "'+esc(mm[0].m.nama)+'" — pilih stok ini di menu tersebut (tab "Semua menu").</div>':'') +
+          '<div style="display:flex;gap:6px;margin-top:6px"><select class="input" data-mk-kat="'+b.id+'" style="flex:1.2">'+cats.map(function(c){ return '<option>'+esc(c)+'</option>'; }).join('')+'</select>' +
+          '<input class="input" data-mk-h="'+b.id+'" inputmode="numeric" placeholder="Harga jual" style="flex:1"><button type="button" class="btn sm" data-mk="'+b.id+'" style="background:var(--ok)">＋ Menu</button></div></div>';
+      }).join('') : '<div class="cmok">✅ Semua stok sudah dipakai menu.</div>');
+    Array.prototype.forEach.call(sh.querySelectorAll('[data-mk-kat]'), function(sel){
+      var b=bahanById(sel.dataset.mkKat), g=A.data.menu.map(function(m){ return {k:m.kategori, s:mirip(b.nama, m.nama)}; }).sort(function(a,c){ return c.s-a.s; })[0];
+      if (g && g.s>0.4) sel.value=g.k; });
+  }
+  draw();
+  $('#hf',sh).onclick=function(e){ var b=e.target.closest('[data-v]'); if(!b) return; filter=b.dataset.v; Array.prototype.forEach.call(this.children,function(x){ x.classList.toggle('on',x===b); }); draw(); };
+  $('#hl',sh).addEventListener('change', function(e){ var id=e.target.dataset.hm; if(!id) return; pilih[id]=e.target.value; delete saran[id]; var row=e.target.closest('.hrow'); row.classList.remove('sar'); var tg=row.querySelector('.sarantag'); if(tg) tg.remove();
+    var m=A.data.menu.filter(function(x){ return x.id===id; })[0]; row.classList.toggle('chg', berubah(m));
+    var nUbah=A.data.menu.filter(berubah).length; $('#hs',sh).textContent = nUbah ? 'Simpan semua ('+nUbah+' perubahan)' : 'Tidak ada perubahan'; $('#hs',sh).disabled=!nUbah; });
+  $('#hl',sh).addEventListener('input', function(e){ if (e.target.dataset.mkH!==undefined) e.target.value=fmtNum(e.target.value); });
+  $('#hl',sh).addEventListener('click', function(e){
+    var t=e.target.closest('[data-mk]'); if(!t) return;
+    var b=bahanById(t.dataset.mk), harga=parseInt(sh.querySelector('[data-mk-h="'+b.id+'"]').value.replace(/\D/g,''),10)||0, kat=sh.querySelector('[data-mk-kat="'+b.id+'"]').value;
+    if (!harga){ toast('Isi harga jual '+b.nama,true); return; }
+    if (A.data.menu.some(function(m){ return normFull(m.nama)===normFull(b.nama); })){ toast('Menu "'+b.nama+'" sudah ada',true); return; }
+    t.disabled=true; t.textContent='…';
+    api('adminSaveItem', A.pin, {id:'', nama:b.nama, kategori:kat, harga:harga, deskripsi:'', foto:'', tersedia:true, bestSeller:false, urutan:A.data.menu.length+1, stok:'', resep:[{b:b.id,q:1,alt:[]}]})
+      .then(function(menu){ A.data.menu=menu; var nm=menu.filter(function(m){ return normFull(m.nama)===normFull(b.nama); })[0]; if(nm) pilih[nm.id]=b.id; toast('Menu '+b.nama+' dibuat ✓ (foto bisa lewat 📷)'); draw(); })
+      .catch(function(err){ t.disabled=false; t.textContent='＋ Menu'; toast(err.message,true); });
+  });
+  $('#hs',sh).onclick=function(){
+    var ubah=A.data.menu.filter(berubah); if(!ubah.length) return;
+    var btn=this; btn.disabled=true; var prog=$('#hp',sh); prog.classList.remove('hidden'); var ok=0, gagal=[];
+    function step(i){
+      if (i>=ubah.length){
+        prog.innerHTML='✅ <b>'+ok+' menu</b> sudah terhubung ke stok'+(gagal.length?'<br>⚠️ Gagal: '+gagal.map(esc).join(', ')+' — tekan simpan lagi':'');
+        draw(); if (!gagal.length) toast(ok+' menu terhubung ke stok ✓');
+        return;
+      }
+      var m=ubah[i], it=JSON.parse(JSON.stringify(m)), b=pilih[m.id], r=it.resep||[];
+      if (!b) r=r.slice(1); else if (r.length) r[0]={b:b, q:r[0].b===b?r[0].q:1, alt:r[0].b===b?r[0].alt:[]}; else r=[{b:b,q:1,alt:[]}];
+      it.resep=r;
+      prog.innerHTML='⏳ '+(i+1)+' dari '+ubah.length+': <b>'+esc(m.nama)+'</b>…<div class="bar"><i style="width:'+Math.round(i/ubah.length*100)+'%"></i></div>';
+      api('adminSaveItem', A.pin, it).then(function(menu){ A.data.menu=menu; ok++; step(i+1); }).catch(function(){ gagal.push(m.nama); step(i+1); });
+    }
+    step(0);
+  };
+  var obs=new MutationObserver(function(){ if(!document.body.contains(sh)){ obs.disconnect(); if(A.tab==='stok') tabStok(); if(A.tab==='menu') tabMenu(); } });
+  obs.observe(document.body,{childList:true});
 }
 
 /* ---------- Tab Keuangan / Kas (khusus Owner) ---------- */
