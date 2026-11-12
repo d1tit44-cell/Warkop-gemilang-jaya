@@ -230,6 +230,19 @@ textarea.input{resize:vertical;min-height:64px}
 .qr-card .qr img,.qr-card .qr canvas{width:100%!important;max-width:180px;height:auto!important}
 .qr-card h4{margin:0;font-family:Fraunces,serif;font-size:20px}
 .qr-card small{display:block;color:var(--muted);font-size:11.5px}
+.qrthumb{background:none;border:0;padding:0;display:flex;flex-direction:column;align-items:center;gap:4px;font:inherit;color:var(--muted);font-size:12px}
+.qrthumb canvas{width:100%;height:auto;border-radius:10px;box-shadow:0 2px 10px rgba(0,0,0,.12)}
+.qrprev{display:flex;justify-content:center;margin-bottom:12px}
+.qrprev canvas{width:62%;max-width:260px;height:auto;border-radius:10px;box-shadow:0 2px 12px rgba(0,0,0,.15)}
+.qrwarna{display:flex;gap:10px;flex-wrap:wrap}
+.qrwarna button{width:42px;height:42px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--line)}
+.qrwarna button.on{box-shadow:0 0 0 3px var(--ink)}
+.qrpil{display:grid;gap:8px;margin-bottom:12px}
+.qrpil button{text-align:left;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:10px 12px;font:inherit;display:flex;flex-direction:column;gap:2px}
+.qrpil button.on{border-color:var(--brand);background:var(--brand-soft)}
+.qrpil small{color:var(--muted)}
+.qrpage{margin:14px 0;text-align:center}
+.qrpage img{width:100%;border:1px solid var(--line);border-radius:8px;margin:6px 0}
 .login{max-width:360px;margin:12vh auto 0;background:var(--card);border-radius:24px;padding:26px 22px;box-shadow:var(--shadow);text-align:center}
 .pin{letter-spacing:.6em;text-align:center;font-size:24px;font-weight:800}
 .hint{font-size:12.5px;color:var(--muted);margin-top:10px}
@@ -427,8 +440,12 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 /* ---------- Pesanan langsung (kasir) ---------- */
 .posbtn{background:var(--ink);margin-bottom:12px;display:flex;flex-direction:column;line-height:1.2;padding:14px}
 .posbtn small{font-size:11px;font-weight:600;opacity:.8}
-.posgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;max-height:42vh;overflow:auto;padding:4px 2px 8px}
-@media(min-width:560px){.posgrid{grid-template-columns:repeat(4,1fr)}}
+.poscats{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px}
+.poscats .chip{margin:0;padding:7px 3px;border-radius:10px;font-size:11px;line-height:1.15;white-space:normal;word-break:break-word;min-height:40px;display:flex;align-items:center;justify-content:center;text-align:center}
+.posgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;max-height:46vh;overflow:auto;padding:4px 2px 8px}
+.posgrid .posit{padding:5px 4px;border-radius:10px;min-height:54px;text-align:center;align-items:center}
+.posgrid .posit img{border-radius:7px;aspect-ratio:1/1}
+.posgrid .posit b{font-size:10.5px;word-break:break-word}.posgrid .qbadge{top:-6px;right:-6px;min-width:20px;height:20px;border-radius:10px;font-size:11px}.posgrid .posit small{font-size:10px}
 .posit{position:relative;background:var(--card);border:2px solid var(--line);border-radius:14px;padding:8px 6px;text-align:left;display:flex;flex-direction:column;gap:2px;min-height:64px}
 .posit img{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:9px;margin-bottom:3px}
 .posit b{font-size:12.5px;line-height:1.2}.posit small{font-size:11.5px;color:var(--gold);font-weight:800}
@@ -1448,33 +1465,231 @@ function editItem(id){
   };
 }
 
-/* ---------- Tab QR Meja ---------- */
-function tabQR(){
-  setTimeout(function(){ var t=$('#tab'); if(t && !$('#qrback')){ var b=document.createElement('button'); b.id='qrback'; b.className='btn ghost sm noprint'; b.style.marginBottom='10px'; b.textContent='← Kembali ke Pengaturan'; b.onclick=function(){ A.tab='atur'; renderTab(); }; t.insertBefore(b, t.firstChild); } }, 0);
+/* ---------- Tab QR Meja (desain kartu bisa diedit + simpan gambar untuk fotokopi) ---------- */
+var QR_WARNA = [['#b9532c','Oranye'],['#5b3a29','Coklat'],['#222222','Hitam'],['#2f7d4f','Hijau'],['#b3261e','Merah'],['#1f5fa8','Biru']];
+var QR_FOTO_KEY = 'qr_foto_kartu';
+function qrDesain(){
+  var s=A.data.settings, d={};
+  try { d = JSON.parse(s.struk_qr_desain||'{}') || {}; } catch(e){}
+  try { if (!s.struk_qr_desain) d = JSON.parse(localStorage.getItem('qr_desain')||'{}') || {}; } catch(e){}
+  return {
+    atas: d.atas!==undefined ? d.atas : (s.nama_warkop||'Warkop'),
+    bawah: d.bawah!==undefined ? d.bawah : 'Scan untuk lihat menu & pesan',
+    ext: d.ext||'',
+    warna: d.warna||'#b9532c',
+    uk: d.uk||'sedang',
+    gbr: d.gbr||'logo',
+    cetak: d.cetak||4,
+    nama: d.nama||{}
+  };
+}
+function qrSimpanDesain(D){
+  var js = JSON.stringify(D);
+  try { localStorage.setItem('qr_desain', js); } catch(e){}
+  if (js.length > 500) { toast('Desain disimpan di HP ini saja (tulisan terlalu panjang untuk disimpan ke Sheet)'); return Promise.resolve(); }
+  return api('adminSaveSettings', A.pin, {struk_qr_desain: js}).then(function(ns){ A.data.settings=ns; }).catch(function(){});
+}
+function qrFoto(){ try { return localStorage.getItem(QR_FOTO_KEY)||''; } catch(e){ return ''; } }
+function qrUrlMeja(i){
   var base = USE_API ? location.origin + location.pathname : IS_GAS ? tplVal(boot.base) : 'https://d1tit44-cell.github.io/Warkop-gemilang-jaya/';
-  var menuUrl = (USE_API || !IS_GAS) ? base+'?menu' : base, adminUrl = (USE_API || !IS_GAS) ? base : base+'?admin';
-  var n = Number(A.data.settings.jumlah_meja)||10;
-  $('#tab').innerHTML =
-    '<div class="noprint"><p class="muted" style="margin-top:0">Cetak QR ini dan tempel di tiap meja. Saat di-scan, nomor meja otomatis terisi.' +
-    (IS_GAS||USE_API?'':' <b>(Pratinjau: alamat QR sudah alamat asli aplikasi GitHub Anda.)</b>')+'</p>' +
-    '<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:14px"><label class="field" style="margin:0;flex:1"><span>JUMLAH MEJA</span><input class="input" id="qn" inputmode="numeric" value="'+n+'"></label>' +
-    '<button class="btn ghost" id="qgo">Buat</button><button class="btn dark" id="qprint">🖨️ Cetak</button></div></div>' +
-    '<div class="qr-grid" id="qrs"></div>' +
-    '<div class="noprint hint" style="text-align:left;margin-top:14px">Alamat menu umum (tanpa nomor meja):<br><code style="word-break:break-all">'+esc(menuUrl)+'</code><br><br>Alamat aplikasi Owner/Kasir:<br><code style="word-break:break-all">'+esc(adminUrl)+'</code></div>';
-  function draw(){
-    var k=Math.max(1,Math.min(60,parseInt($('#qn').value,10)||1)), wrap=$('#qrs'); wrap.innerHTML='';
-    for(var i=0;i<=k;i++){
-      var url = i===0 ? menuUrl : base+'?meja='+i;
-      var card=document.createElement('div'); card.className='qr-card';
-      card.innerHTML='<small>'+esc(A.data.settings.nama_warkop||'')+'</small><h4>'+(i===0?'Menu':'Meja '+i)+'</h4><div class="qr"></div><small>Scan untuk lihat menu & pesan</small>';
-      wrap.appendChild(card);
-      if (window.QRCode) new QRCode(card.querySelector('.qr'), {text:url, width:360, height:360, correctLevel:QRCode.CorrectLevel.M});
-      else card.querySelector('.qr').innerHTML='<small>QR gagal dimuat (cek internet)</small>';
-    }
+  var menuUrl = (USE_API || !IS_GAS) ? base+'?menu' : base;
+  return i===0 ? menuUrl : base+'?meja='+i;
+}
+function qrJudul(D, i){ var n=D.nama && D.nama[i]; return n || (i===0 ? 'Menu' : 'Meja '+i); }
+function qrLoadImg(src){
+  return new Promise(function(res){ if(!src){ res(null); return; } var im=new Image(); im.onload=function(){ res(im); }; im.onerror=function(){ res(null); }; im.src=src; });
+}
+function qrGambarSumber(D){
+  if (D.gbr==='none') return Promise.resolve(null);
+  if (D.gbr==='foto' && qrFoto()) return qrLoadImg(qrFoto());
+  var src=logoSrc(A.data.settings); return qrLoadImg(/^data:/.test(src) ? src : DEFAULT_LOGO);
+}
+function qrKode(url){
+  var div=document.createElement('div'); div.style.cssText='position:fixed;left:-9999px;top:0';
+  document.body.appendChild(div);
+  try { new QRCode(div, {text:url, width:720, height:720, correctLevel:QRCode.CorrectLevel.M}); } catch(e){ div.remove(); return null; }
+  var c=div.querySelector('canvas'); div.remove(); return c;
+}
+/* gambar satu kartu 1000×1400 px */
+function qrKartu(D, i, gbr){
+  var W=1000, H=1400, cv=document.createElement('canvas'); cv.width=W; cv.height=H;
+  var g=cv.getContext('2d'), col=D.warna, serif='Fraunces, Georgia, serif', sans='"Plus Jakarta Sans", Arial, sans-serif';
+  function fit(text, size, weight, font, maxW){ var s=size; do { g.font=weight+' '+s+'px '+font; if (g.measureText(text).width<=maxW) break; s-=2; } while(s>16); return s; }
+  g.fillStyle='#fff'; g.fillRect(0,0,W,H);
+  // pita atas
+  var bandH = gbr ? 360 : 230;
+  g.fillStyle=col; g.fillRect(0,0,W,bandH);
+  if (gbr){
+    g.fillStyle='#fff'; g.beginPath(); g.arc(W/2, 135, 105, 0, Math.PI*2); g.fill();
+    var sc=Math.min(170/gbr.width, 170/gbr.height), iw=gbr.width*sc, ih=gbr.height*sc;
+    g.save(); g.beginPath(); g.arc(W/2,135,100,0,Math.PI*2); g.clip(); g.drawImage(gbr, W/2-iw/2, 135-ih/2, iw, ih); g.restore();
   }
-  $('#qgo').onclick=draw;
-  $('#qprint').onclick=function(){ try{ window.print(); }catch(e){ toast('Cetak tidak didukung di sini. Tekan lama gambar QR untuk menyimpan.', true); } };
+  g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle';
+  if (D.atas){ fit(D.atas, 62, '800', serif, W-100); g.fillText(D.atas, W/2, gbr ? 300 : 115); }
+  // judul (Meja 1)
+  var big = {kecil:110, sedang:140, besar:175}[D.uk] || 140, judul=qrJudul(D,i);
+  g.fillStyle='#1d1410'; fit(judul, big, '800', serif, W-100);
+  var ty = bandH + 40 + big*0.55; g.fillText(judul, W/2, ty);
+  // QR
+  var top = ty + big*0.55 + 30, bottomSpace = (D.bawah?80:0) + (D.ext?70:0) + 70;
+  top += 20; var q = Math.min(580, H - top - bottomSpace - 20), qx=(W-q)/2;
+  g.strokeStyle=col; g.lineWidth=6; roundRect(g, qx-46, top-46, q+92, q+92, 36); g.stroke();
+  var kode=qrKode(qrUrlMeja(i));
+  if (kode){ g.imageSmoothingEnabled=false; g.drawImage(kode, qx, top, q, q); g.imageSmoothingEnabled=true; }
+  else { g.fillStyle='#999'; g.font='40px '+sans; g.fillText('QR gagal (cek internet)', W/2, top+q/2); }
+  var y = top + q + 46 + 52;
+  if (D.bawah){ g.fillStyle='#4a3a30'; fit(D.bawah, 46, '700', sans, W-100); g.fillText(D.bawah, W/2, y); y+=68; }
+  if (D.ext){ g.fillStyle=col; fit(D.ext, 40, '700', sans, W-100); g.fillText(D.ext, W/2, y); }
+  // bingkai
+  g.strokeStyle=col; g.lineWidth=14; g.strokeRect(7,7,W-14,H-14);
+  return cv;
+}
+function roundRect(g,x,y,w,h,r){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath(); }
+function qrFontSiap(){ try { return document.fonts && document.fonts.ready ? document.fonts.ready : Promise.resolve(); } catch(e){ return Promise.resolve(); } }
+
+function tabQR(){
+  var D = qrDesain(), n = Number(A.data.settings.jumlah_meja)||10, gbrCache;
+  $('#tab').innerHTML =
+    '<button class="btn ghost sm" id="qrback" style="margin-bottom:10px">← Kembali ke Pengaturan</button>' +
+    '<p class="muted" style="margin-top:0">Ketuk salah satu kartu untuk <b>mengubah tulisan, warna, ukuran & gambar</b>. Setelah rapi, tekan <b>Simpan untuk Fotokopi</b>.</p>' +
+    '<div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:10px"><label class="field" style="margin:0;flex:1"><span>JUMLAH MEJA</span><input class="input" id="qn" inputmode="numeric" value="'+n+'"></label>' +
+    '<button class="btn ghost" id="qgo">Buat</button></div>' +
+    '<button class="btn block" id="qsave" style="margin-bottom:6px">🖼️ Simpan untuk Fotokopi</button>' +
+    '<button class="btn ghost block" id="qall" style="margin-bottom:14px">🎨 Ubah Desain Semua Kartu</button>' +
+    '<div class="qr-grid" id="qrs"></div>' +
+    '<div class="hint" style="text-align:left;margin-top:14px">Alamat menu umum (tanpa nomor meja):<br><code style="word-break:break-all">'+esc(qrUrlMeja(0))+'</code></div>';
+  $('#qrback').onclick=function(){ A.tab='atur'; renderTab(); };
+  function jumlah(){ return Math.max(1,Math.min(60,parseInt($('#qn').value,10)||1)); }
+  function draw(){
+    if (!window.QRCode){ $('#qrs').innerHTML='<div class="empty">QR gagal dimuat. Cek internet lalu buka lagi.</div>'; return; }
+    var k=jumlah(), wrap=$('#qrs'); wrap.innerHTML='<div class="loading" style="grid-column:1/-1">Menyiapkan kartu…</div>';
+    Promise.all([qrFontSiap(), qrGambarSumber(D)]).then(function(r){
+      gbrCache=r[1]; wrap.innerHTML='';
+      for (var i=0;i<=k;i++){
+        var b=document.createElement('button'); b.className='qrthumb'; b.dataset.i=i;
+        var big=qrKartu(D, i, gbrCache), cv=document.createElement('canvas'); cv.width=300; cv.height=420; cv.getContext('2d').drawImage(big,0,0,300,420); b.appendChild(cv); b.insertAdjacentHTML('beforeend','<span>✏️ Ketuk untuk edit</span>');
+        wrap.appendChild(b);
+      }
+    });
+  }
+  $('#qgo').onclick=function(){
+    var k=jumlah(); draw();
+    if (String(k)!==String(A.data.settings.jumlah_meja)) api('adminSaveSettings', A.pin, {jumlah_meja:String(k)}).then(function(ns){ A.data.settings=ns; }).catch(function(){});
+  };
+  $('#qrs').onclick=function(e){ var b=e.target.closest('[data-i]'); if(b) qrEditor(D, Number(b.dataset.i), function(nd){ D=nd; draw(); }); };
+  $('#qall').onclick=function(){ qrEditor(D, 1, function(nd){ D=nd; draw(); }, true); };
+  $('#qsave').onclick=function(){ qrSimpanFotokopi(D, jumlah()); };
   draw();
+}
+
+function qrEditor(D0, idx, done, semua){
+  var D=JSON.parse(JSON.stringify(D0)), gbr=null;
+  var uk=[['kecil','Kecil'],['sedang','Sedang'],['besar','Besar']], gb=[['logo','Logo warkop'],['foto','Foto sendiri'],['none','Tanpa gambar']];
+  var sh=openSheet('<h3 class="serif">'+(semua?'🎨 Desain Semua Kartu':'✏️ Edit Kartu '+esc(qrJudul(D,idx)))+'</h3>' +
+    '<div class="qrprev" id="qp"></div>' +
+    (semua?'':'<label class="field"><span>TULISAN BESAR (khusus kartu ini)</span><input class="input" id="qj" maxlength="24" value="'+esc(qrJudul(D,idx))+'"></label>') +
+    '<div class="hint" style="text-align:left;margin:4px 0 10px">Bagian di bawah ini berlaku untuk <b>semua kartu</b>, supaya semua meja seragam dan rapi.</div>' +
+    '<label class="field"><span>TULISAN ATAS</span><input class="input" id="qa" maxlength="40" value="'+esc(D.atas)+'"></label>' +
+    '<label class="field"><span>TULISAN BAWAH</span><input class="input" id="qb" maxlength="50" value="'+esc(D.bawah)+'"></label>' +
+    '<label class="field"><span>TULISAN TAMBAHAN (boleh kosong, cth: WiFi / Instagram)</span><input class="input" id="qe" maxlength="50" placeholder="cth: WiFi: gemilang123" value="'+esc(D.ext)+'"></label>' +
+    '<div class="field"><span>UKURAN TULISAN BESAR</span><div class="seg" id="qu" style="margin:0">'+uk.map(function(x){ return '<button type="button" data-v="'+x[0]+'" class="'+(D.uk===x[0]?'on':'')+'">'+x[1]+'</button>'; }).join('')+'</div></div>' +
+    '<div class="field"><span>WARNA</span><div class="qrwarna" id="qw">'+QR_WARNA.map(function(w){ return '<button type="button" data-v="'+w[0]+'" style="background:'+w[0]+'" class="'+(D.warna===w[0]?'on':'')+'" aria-label="'+w[1]+'"></button>'; }).join('')+'</div></div>' +
+    '<div class="field"><span>GAMBAR DI ATAS</span><div class="seg" id="qg" style="margin:0">'+gb.map(function(x){ return '<button type="button" data-v="'+x[0]+'" class="'+(D.gbr===x[0]?'on':'')+'">'+x[1]+'</button>'; }).join('')+'</div></div>' +
+    '<div id="qfw" style="display:'+(D.gbr==='foto'?'block':'none')+'"><label class="btn ghost block" style="margin-bottom:6px">📷 Pilih Foto dari Galeri<input type="file" accept="image/*" id="qf" hidden></label>' +
+      '<div class="hint" style="text-align:left;margin-top:0">Foto disimpan di HP ini.</div></div>' +
+    '<button class="btn block" id="qok" style="margin-top:10px">✓ Simpan Desain</button>' +
+    (semua?'':'<button class="btn ghost block" id="qone" style="margin-top:8px">💾 Simpan Gambar Kartu Ini Saja</button>') +
+    '<button class="btn ghost block" id="qreset" style="margin-top:8px">↺ Kembalikan ke Desain Awal</button>');
+  function baca(){
+    D.atas=$('#qa',sh).value.trim(); D.bawah=$('#qb',sh).value.trim(); D.ext=$('#qe',sh).value.trim();
+    if (!semua){ var j=$('#qj',sh).value.trim(), def=(idx===0?'Menu':'Meja '+idx); if (!j || j===def) delete D.nama[idx]; else D.nama[idx]=j; }
+  }
+  function preview(){
+    baca();
+    var p=$('#qp',sh); p.innerHTML=''; p.appendChild(qrKartu(D, idx, gbr));
+  }
+  function muatGambar(){ return qrGambarSumber(D).then(function(im){ gbr=im; preview(); }); }
+  sh.addEventListener('input', function(e){ if (e.target.id!=='qf') preview(); });
+  sh.addEventListener('click', function(e){
+    var b=e.target.closest('#qu [data-v],#qw [data-v],#qg [data-v]'); if(!b) return;
+    var grp=b.parentNode.id; [].forEach.call(b.parentNode.children, function(x){ x.classList.toggle('on', x===b); });
+    if (grp==='qu') D.uk=b.dataset.v; if (grp==='qw') D.warna=b.dataset.v;
+    if (grp==='qg'){ D.gbr=b.dataset.v; $('#qfw',sh).style.display = D.gbr==='foto'?'block':'none';
+      if (D.gbr==='foto' && !qrFoto()) toast('Pilih foto dulu dari galeri 📷'); muatGambar(); return; }
+    preview();
+  });
+  $('#qf',sh).onchange=function(){
+    var f=this.files[0]; if(!f) return;
+    resizeImage(f, 500, f.type==='image/png'?'image/png':'image/jpeg').then(function(url){
+      try { localStorage.setItem(QR_FOTO_KEY, url); } catch(e){ toast('Foto terlalu besar untuk disimpan',true); return; }
+      D.gbr='foto'; muatGambar(); toast('Foto dipasang ✓');
+    }).catch(function(e){ toast(e.message,true); });
+  };
+  $('#qok',sh).onclick=function(){ baca(); var b=this; b.disabled=true; qrSimpanDesain(D).then(function(){ closeSheet(); toast('Desain disimpan ✓'); done(D); }); };
+  if ($('#qone',sh)) $('#qone',sh).onclick=function(){ baca(); qrBagikan([{cv:qrKartu(D, idx, gbr), nama:'QR-'+qrJudul(D,idx).replace(/\W+/g,'-')+'.png'}], 'Kartu QR '+qrJudul(D,idx)); };
+  $('#qreset',sh).onclick=function(){
+    confirmBox('Kembalikan semua tulisan, warna dan gambar ke desain awal?','Kembalikan').then(function(ok){ if(!ok) return;
+      var s=A.data.settings; D={atas:s.nama_warkop||'Warkop', bawah:'Scan untuk lihat menu & pesan', ext:'', warna:'#b9532c', uk:'sedang', gbr:'logo', cetak:D.cetak||4, nama:{}};
+      qrSimpanDesain(D).then(function(){ closeSheet(); toast('Desain dikembalikan ✓'); done(D); }); });
+  };
+  qrFontSiap().then(muatGambar);
+}
+
+/* gabungkan kartu ke kertas A4 (200 dpi) */
+function qrSimpanFotokopi(D, k){
+  var pil=[[1,'Besar','1 kartu per kertas A4 (±18×25 cm)'],[4,'Sedang','4 kartu per kertas A4 (±9×13 cm) — paling pas untuk meja'],[9,'Kecil','9 kartu per kertas A4 (±6×8,5 cm)']];
+  var sh=openSheet('<h3 class="serif">🖼️ Simpan untuk Fotokopi</h3>' +
+    '<p class="muted" style="margin-top:0">Pilih ukuran kartu. Hasilnya berupa gambar ukuran kertas A4 yang bisa langsung dikirim ke tukang fotokopi.</p>' +
+    '<div class="qrpil">'+pil.map(function(p){ return '<button class="'+(D.cetak===p[0]?'on':'')+'" data-c="'+p[0]+'"><b>'+p[1]+'</b><small>'+p[2]+'</small></button>'; }).join('')+'</div>' +
+    '<div id="qhasil"></div>');
+  sh.addEventListener('click', function(e){
+    var b=e.target.closest('[data-c]'); if(!b) return;
+    [].forEach.call(sh.querySelectorAll('[data-c]'), function(x){ x.classList.toggle('on', x===b); });
+    D.cetak=Number(b.dataset.c); try { localStorage.setItem('qr_desain', JSON.stringify(D)); } catch(err){}
+    buat();
+  });
+  function buat(){
+    var h=$('#qhasil',sh); h.innerHTML='<div class="loading">Membuat gambar…</div>';
+    Promise.all([qrFontSiap(), qrGambarSumber(D)]).then(function(r){
+      var gbr=r[1], per=D.cetak, kol=per===1?1:per===4?2:3, PW=1654, PH=2339, M=60, gap=per===1?0:30;
+      var cw=(PW-2*M-gap*(kol-1))/kol, ch=(PH-2*M-gap*(kol-1))/kol, s=Math.min(cw/1000, ch/1400), w=1000*s, hh=1400*s;
+      var ox=(PW-(w*kol+gap*(kol-1)))/2, oy=(PH-(hh*kol+gap*(kol-1)))/2, pages=[], tot=k+1;
+      for (var p=0; p*per<tot; p++){
+        var cv=document.createElement('canvas'); cv.width=PW; cv.height=PH; var g=cv.getContext('2d');
+        g.fillStyle='#fff'; g.fillRect(0,0,PW,PH);
+        for (var j=0;j<per;j++){ var i=p*per+j; if(i>=tot) break;
+          var x=ox+(j%kol)*(w+gap), y=oy+Math.floor(j/kol)*(hh+gap);
+          g.drawImage(qrKartu(D, i, gbr), x, y, w, hh);
+          if (per>1){ g.setLineDash([12,10]); g.strokeStyle='#bbb'; g.lineWidth=2; g.strokeRect(x-gap/2+1, y-gap/2+1, w+gap-2, hh+gap-2); g.setLineDash([]); }
+        }
+        pages.push({cv:cv, nama:'QR-Meja-'+(A.data.settings.nama_warkop||'Warkop').replace(/\W+/g,'-')+'-hal'+(p+1)+'.png'});
+      }
+      h.innerHTML=''; qrTampilHasil(h, pages, 'QR Meja '+(A.data.settings.nama_warkop||''), per);
+    });
+  }
+  buat();
+}
+function qrTampilHasil(h, items, judul, per){
+  var files=[], urls=[], sisa=items.length;
+  items.forEach(function(it, n){
+    it.cv.toBlob(function(blob){
+      urls[n]=URL.createObjectURL(blob); try { files[n]=new File([blob], it.nama, {type:'image/png'}); } catch(e){}
+      if (--sisa===0) tampil();
+    }, 'image/png');
+  });
+  function tampil(){
+    var bisa = files.length===items.length && files.every(Boolean) && navigator.canShare && navigator.canShare({files:files});
+    h.innerHTML =
+      '<div class="lapbtn">'+(bisa?'<button class="btn" id="qsh" style="background:#25a244">📤 Kirim '+(items.length>1?'Semua ('+items.length+' gambar)':'Gambar')+' ke WhatsApp</button>':'')+'</div>' +
+      '<div class="hint" style="text-align:left">'+(bisa?'Tekan <b>Kirim</b> → pilih <b>WhatsApp</b> → kirim ke tukang fotokopi (atau ke diri sendiri dulu). ':'')+'Bisa juga <b>tekan lama</b> tiap gambar untuk menyimpan ke galeri.' +
+        (per?'<br><br>📝 Pesan untuk tukang fotokopi: <b>"Tolong cetak berwarna di kertas A4'+(per>1?', lalu digunting sesuai garis putus-putus':'')+', dilaminating ya."</b>':'')+'</div>' +
+      items.map(function(it, n){ return '<div class="qrpage"><small>Gambar '+(n+1)+' dari '+items.length+'</small><img src="'+urls[n]+'" alt=""><a class="btn ghost sm" href="'+urls[n]+'" download="'+it.nama+'">💾 Simpan gambar '+(n+1)+'</a></div>'; }).join('');
+    if (bisa) $('#qsh',h).onclick=function(){ navigator.share({files:files, title:judul}).catch(function(){}); };
+  }
+}
+function qrBagikan(items, judul){
+  var sh=openSheet('<h3 class="serif">💾 Simpan Gambar</h3><div id="qhasil"><div class="loading">Membuat gambar…</div></div>');
+  qrTampilHasil($('#qhasil',sh), items, judul, 0);
 }
 
 /* ---------- Diskon (hitungan sama persis dengan server) ---------- */
@@ -2256,7 +2471,7 @@ function posOpen(){
   var sh = openSheet('<h3 class="serif">＋ Pesanan Langsung</h3>' +
     '<p class="muted" style="margin:0 0 8px;font-size:13px">Untuk pelanggan yang pesan langsung ke kasir. Ketuk menu untuk menambah.</p>' +
     '<label class="search" style="margin-bottom:8px"><span>🔎</span><input id="pq" type="search" placeholder="Cari menu…"></label>' +
-    '<div class="chips" id="pc" style="padding-top:0">'+cats.map(function(c){ return '<button class="chip'+(c==='Semua'?' on':'')+'" data-c="'+esc(c)+'">'+esc(c)+'</button>'; }).join('')+'</div>' +
+    '<div class="poscats" id="pc">'+cats.map(function(c){ return '<button class="chip'+(c==='Semua'?' on':'')+'" data-c="'+esc(c)+'">'+esc(c)+'</button>'; }).join('')+'</div>' +
     '<div class="posgrid" id="pg"></div>' +
     '<div class="poscart" id="pk"></div>');
   function qtyOf(id){ return P.cart[id] ? P.cart[id].qty : 0; }
