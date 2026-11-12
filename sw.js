@@ -1,5 +1,5 @@
 // Service worker sederhana agar aplikasi bisa diinstal.
-const CACHE = 'kasir-warkop-v13';
+const CACHE = 'kasir-warkop-v14';
 const FILES = ['./', './index.html', './manifest.json', './icon.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => { e.waitUntil(self.clients.claim()); });

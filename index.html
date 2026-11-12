@@ -373,7 +373,7 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 .saldobox .sr1{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:14px}
 .saldobox .sr1.tot{border-top:1px dashed var(--line);margin-top:4px;padding-top:8px;font-weight:800;font-size:15px}
 .saldobox .sr1.tot b{font-family:Fraunces,serif;font-size:24px}
-.saldobox b.pos{color:var(--ok)}.saldobox b.neg{color:var(--bad)}
+.saldobox b.pos{color:var(--ok)}.saldoarti{background:#fff6dd;border:1px solid #ecd9a0;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.45;margin:4px 0 8px}.saldobox b.neg{color:var(--bad)}
 .saldobox.empty{border-style:dashed;display:flex;flex-direction:column;gap:6px;font-size:13px}
 .saldobox.empty .btn{align-self:flex-start}
 .linkbtn{background:none;border:0;color:var(--muted);font-size:12px;padding:6px 0 0;text-decoration:underline}
@@ -1898,7 +1898,11 @@ function renderLaporan(sh, d, label, from, to){
       '<button class="btn ghost" id="lprint">📄 Simpan sebagai PDF</button><button class="btn ghost" id="lcopy">📋 Salin teks untuk WhatsApp</button></div>' +
     '<div class="hint" style="text-align:left">Saran: kirim sebagai <b>gambar</b> — bos cukup membuka seperti foto biasa, rapi dan tidak perlu aplikasi lain.</div>';
   html = '<button class="btn block" id="limg" style="background:#25a244;margin-bottom:12px">🖼️ Kirim Laporan sebagai Gambar</button>' + html;
+  if (!L.saldo || L.saldo.belum) html = '<div class="saldobox empty" style="margin-bottom:12px"><b>⚠️ Kas sebelumnya belum ikut dihitung</b><span>' +
+    (!L.saldo ? 'Saldo awal kas belum diisi, jadi laporan hanya menampilkan uang hari ini.' : 'Saldo awal diisi per akhir '+fmtTgl(L.saldo.tglAwal)+', jadi laporan tanggal ini belum memakai saldo.') +
+    ' Isi <b>saldo awal</b> = uang kas yang benar-benar ada di akhir hari <b>sebelum</b> laporan ini.</span><button class="btn sm" id="lsaldo">Isi Saldo Awal</button></div>' + html;
   $('#lapw',sh).innerHTML=html;
+  if ($('#lsaldo',sh)) $('#lsaldo',sh).onclick=function(){ closeSheet(); editSaldoAwal(from===to ? hariSebelum(from) : null); };
   $('#lcopy',sh).onclick=function(){
     var t=['*LAPORAN '+(from===to?'HARIAN':'PERIODE')+' '+(s.nama_warkop||'').toUpperCase()+'*', label, 'Dibuat '+jam+' oleh '+A.me.nama, '',
       ];
@@ -2102,15 +2106,22 @@ function saldoCardHtml(d, c){
     '<div class="sr1 tot"><span>💼 SALDO KAS '+(K.mode==='hari'&&r[0]===todayISO()?'SEKARANG':'AKHIR')+'</span><b>'+rp(si.akhir)+'</b></div>' +
     '<button class="linkbtn" id="ksaldo">⚙️ Saldo awal '+rp(si.awal)+' per '+fmtTgl(si.tglAwal)+' — ubah</button></div>';
 }
-function editSaldoAwal(){
+function editSaldoAwal(tglSaran){
   var s=A.data.settings;
   var sh=openSheet('<h3 class="serif">💼 Saldo Awal Kas</h3>' +
     '<p class="muted" style="margin:0 0 6px">Jumlah uang kas yang benar-benar ada di <b>akhir</b> tanggal di bawah. Mulai hari berikutnya, saldo dihitung otomatis.</p>' +
     '<label class="field"><span>SALDO KAS (Rp)</span><input class="input bignum" id="sa1" inputmode="numeric" value="'+fmtNum(s.kas_saldo_awal||'')+'" placeholder="0"></label>' +
-    '<label class="field"><span>PER AKHIR TANGGAL</span><input class="input" type="date" id="sa2" value="'+(s.kas_tgl_awal||hariSebelum(todayISO()))+'"></label>' +
-    '<div class="hint" style="text-align:left">Contoh: saldo Rp222.000 per akhir Selasa 10 Nov. Maka laporan Rabu 11 Nov menampilkan "Saldo sebelumnya Rp222.000" + kas bersih Rabu.</div>' +
+    '<label class="field"><span>PER AKHIR TANGGAL</span><input class="input" type="date" id="sa2" value="'+((typeof tglSaran==='string'&&tglSaran)||s.kas_tgl_awal||hariSebelum(todayISO()))+'"></label>' +
+    '<div class="saldoarti" id="sa4"></div>' +
+    '<div class="hint" style="text-align:left">Contoh: sisa kas Rp49.000 di akhir 11 Nov → isi Rp49.000, tanggal 11 Nov. Maka laporan 12 Nov menampilkan "Kas sebelumnya Rp49.000" + kas bersih 12 Nov.</div>' +
     '<button class="btn block" id="sa3" style="margin-top:10px">Simpan Saldo Awal</button>');
-  $('#sa1',sh).addEventListener('input', function(){ this.value=fmtNum(this.value); });
+  function arti(){
+    var n=parseInt($('#sa1',sh).value.replace(/\D/g,''),10)||0, t=$('#sa2',sh).value; if(!t){ $('#sa4',sh).innerHTML=''; return; }
+    var p=t.split('-'), d=new Date(+p[0], +p[1]-1, +p[2]+1), bsk=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+    $('#sa4',sh).innerHTML='Artinya: di akhir <b>'+fmtTgl(t)+'</b> uang kas ada <b>'+rp(n)+'</b>.<br>Laporan <b>'+fmtTgl(bsk)+'</b> dan seterusnya akan menambahkan uang ini otomatis.';
+  }
+  $('#sa1',sh).addEventListener('input', function(){ this.value=fmtNum(this.value); arti(); });
+  $('#sa2',sh).addEventListener('change', arti); arti();
   $('#sa3',sh).onclick=function(){
     var n=parseInt($('#sa1',sh).value.replace(/\D/g,''),10), t=$('#sa2',sh).value;
     if (isNaN(n)){ toast('Isi saldo (boleh 0)',true); return; }
@@ -2838,7 +2849,7 @@ function kasRender(){
     }).join('') + (items.length>300?'<div class="hint">Menampilkan 300 terbaru. Data lengkap ada di Google Sheet.</div>':'')
     : '<div class="empty">Belum ada catatan di periode ini.</div>');
   $('#kbody').innerHTML = html;
-  if ($('#ksaldo')) $('#ksaldo').onclick=editSaldoAwal;
+  if ($('#ksaldo')) $('#ksaldo').onclick=function(){ editSaldoAwal(); };
   $('#kbody').onclick=function(e){
     var t;
     if ((t=e.target.closest('[data-l]'))){ K.list=t.dataset.l; kasRender(); return; }
