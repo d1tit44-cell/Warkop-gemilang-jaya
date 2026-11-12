@@ -295,6 +295,9 @@ textarea.input{resize:vertical;min-height:64px}
 .toplist{background:var(--card);border-radius:16px;border:1px solid var(--line);padding:6px 12px}
 .toplist div{display:flex;justify-content:space-between;padding:6px 0;font-size:14px}
 .toplist div+div{border-top:1px dashed var(--line)}
+.bklist div span{flex:1;min-width:0}.bklist div b{width:44px;text-align:right}.bklist div em{width:92px;text-align:right;font-style:normal;color:var(--muted)}
+.bklist .bkb{color:var(--warn);font-size:11px}.bklist .bktot{border-top:2px solid var(--line)!important;font-weight:800}.bklist .bktot em{color:inherit;font-weight:800}
+.krow small.kitems{color:var(--ink);font-weight:600;white-space:normal}
 .krow{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px 12px;margin-bottom:6px}
 .krow i{font-style:normal;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;font-weight:800;flex:none}
 .krow i.in{background:var(--ok-soft);color:var(--ok)}.krow i.out{background:#f6d6d1;color:var(--bad)}.krow i.wait{background:var(--warn-soft);color:#7a5210}.krow i.x{background:var(--line);color:var(--muted)}
@@ -2587,9 +2590,23 @@ function kasRender(){
         : '<div class="empty">Belum ada data.</div>');
   }
 
-  // Menu terlaris
-  var top=Object.keys(c.item).map(function(n){ return [n,c.item[n]]; }).sort(function(a,b){ return b[1]-a[1]; }).slice(0,5);
-  if (top.length) html += '<h3 class="serif kash3">🏆 Menu Terlaris</h3><div class="toplist">'+top.map(function(t,i){ return '<div><span>'+(i+1)+'. '+esc(t[0])+'</span><b>'+t[1]+'×</b></div>'; }).join('')+'</div>';
+  // Barang keluar (SEMUA menu yang terjual, tidak dibatasi)
+  var bk={}, bkQ=0, bkRp=0, bkBelum=0;
+  d.orders.forEach(function(o){
+    if (o.status==='Batal') return;
+    var lun=isLunas(o);
+    (o.items||[]).forEach(function(i){
+      var q=Number(i.qty||0), r=q*Number(i.harga||0);
+      if(!bk[i.nama]) bk[i.nama]={q:0,r:0,b:0};
+      bk[i.nama].q+=q; bk[i.nama].r+=r; bkQ+=q; bkRp+=r;
+      if(!lun){ bk[i.nama].b+=q; bkBelum+=q; }
+    });
+  });
+  var bkList=Object.keys(bk).map(function(n){ return [n,bk[n]]; }).sort(function(a,b){ return b[1].q-a[1].q || a[0].localeCompare(b[0]); });
+  if (bkList.length) html += '<h3 class="serif kash3">📋 Barang Keluar '+(K.mode==='hari'?'Hari Ini':'Periode Ini')+'</h3><div class="toplist bklist">' +
+    bkList.map(function(t){ return '<div><span>'+esc(t[0])+(t[1].b?' <small class="bkb">('+t[1].b+' belum bayar)</small>':'')+'</span><b>'+t[1].q+'×</b><em>'+rp(t[1].r)+'</em></div>'; }).join('') +
+    '<div class="bktot"><span>TOTAL '+bkList.length+' macam menu</span><b>'+bkQ+'×</b><em>'+rp(bkRp)+'</em></div></div>' +
+    (bkBelum?'<div class="hint">Termasuk '+bkBelum+' porsi dari pesanan yang belum dibayar. Harga sebelum diskon.</div>':'<div class="hint">Harga sebelum diskon.</div>');
 
   // Daftar catatan
   var items = d.entries.map(function(e){ return {t:'e', tgl:e.tanggal, jam:'', x:e}; })
@@ -2602,7 +2619,7 @@ function kasRender(){
       if (it.t==='e'){ var e=it.x, out=e.jenis==='Pengeluaran';
         return '<button class="krow" data-entry="'+esc(e.id)+'"><i class="'+(out?'out':'in')+'">'+(isBelanja(e)?'🛒':out?'−':'+')+'</i><span><b>'+esc(e.kategori)+(isBelanja(e)?' ('+e.rincian.length+' barang)':'')+'</b><small>'+fmtTgl(e.tanggal)+' · '+PAY_ICON[e.metode]+' '+esc(e.metode)+(e.catatan?' · '+esc(e.catatan):'')+'</small></span><em class="'+(out?'neg':'pos')+'">'+(out?'−':'+')+rp(e.nominal)+'</em></button>'; }
       var o=it.x, lunas=isLunas(o);
-      return '<button class="krow" data-order="'+esc(o.id)+'"><i class="'+(o.status==='Batal'?'x':lunas?'in':'wait')+'">'+(o.status==='Batal'?'✕':lunas?'✓':'…')+'</i><span><b>'+esc(o.no)+' · Meja '+esc(o.meja)+(o.nama?' · '+esc(o.nama):'')+'</b><small>'+fmtTgl(o.tgl)+' '+esc(o.jam)+' · '+PAY_ICON[o.metode]+' '+esc(o.metode)+' · '+(o.status==='Batal'?'BATAL':lunas?'Lunas':'Belum bayar')+'</small></span><em class="'+(o.status==='Batal'?'muted':lunas?'pos':'muted')+'">'+rp(lunas?o.nominal:o.total)+'</em></button>';
+      return '<button class="krow" data-order="'+esc(o.id)+'"><i class="'+(o.status==='Batal'?'x':lunas?'in':'wait')+'">'+(o.status==='Batal'?'✕':lunas?'✓':'…')+'</i><span><b>'+esc(o.no)+' · Meja '+esc(o.meja)+(o.nama?' · '+esc(o.nama):'')+'</b><small class="kitems">'+(o.items||[]).map(function(i){ return i.qty+'× '+esc(i.nama); }).join(', ')+'</small><small>'+fmtTgl(o.tgl)+' '+esc(o.jam)+' · '+PAY_ICON[o.metode]+' '+esc(o.metode)+' · '+(o.status==='Batal'?'BATAL':lunas?'Lunas':'Belum bayar')+'</small></span><em class="'+(o.status==='Batal'?'muted':lunas?'pos':'muted')+'">'+rp(lunas?o.nominal:o.total)+'</em></button>';
     }).join('') + (items.length>300?'<div class="hint">Menampilkan 300 terbaru. Data lengkap ada di Google Sheet.</div>':'')
     : '<div class="empty">Belum ada catatan di periode ini.</div>');
   $('#kbody').innerHTML = html;
