@@ -1837,7 +1837,7 @@ function resepRingkas(m){
 /* ---------- Laporan untuk bos (rapi, siap screenshot / salin ke WhatsApp) ---------- */
 function openLaporanHariIni(){
   var t=todayISO(); var sh=openSheet('<div id="lapw"><div class="loading">Menyusun laporan…</div></div>');
-  api('adminReport', A.pin, t, t).then(function(d){ renderLaporan(sh, d, fmtTgl(t), t, t); })
+  api('adminReport', A.pin, t, t).then(function(d){ return lengkapiSaldo(d, t); }).then(function(d){ renderLaporan(sh, d, fmtTgl(t), t, t); })
     .catch(function(e){ $('#lapw',sh).innerHTML='<div class="empty">'+esc(e.message)+'</div>'; });
 }
 function openLaporan(){ var r=kasRange(); var sh=openSheet('<div id="lapw"></div>'); renderLaporan(sh, K.data, kasLabel(), r[0], r[1]); }
@@ -2090,6 +2090,32 @@ var JENIS_BELANJA = ['Belanja Harian','Belanja Mingguan','Belanja Bulanan'];
 var SATUAN_BELI = ['dus','renceng','pak','bungkus','pcs','kg','liter','sachet','botol','karung','ikat'];
 function isBelanja(e){ return e && e.rincian && e.rincian.length; }
 function hariSebelum(iso){ var p=iso.split('-'), d=new Date(+p[0], +p[1]-1, +p[2]-1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+/* Google Sheet suka mengubah teks tanggal "2026-11-11" menjadi tanggal asli,
+   sehingga terbaca "Wed Nov 11 2026 ...". Fungsi ini membaca keduanya. */
+function tglSetting(v){
+  v=String(v||'').trim().replace(/^'/,'');
+  if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v;
+  if (!v) return '';
+  var d=new Date(v); if (isNaN(d)) return '';
+  return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
+}
+function hariBerikut(iso){ var p=iso.split('-'), d=new Date(+p[0], +p[1]-1, +p[2]+1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
+/* Lengkapi saldo kas bila server tidak mengirimnya (mis. tanggal tersimpan sebagai tanggal Sheet) */
+function lengkapiSaldo(d, from){
+  if (d.saldo && d.saldo.sebelum!==null && d.saldo.sebelum!==undefined) return Promise.resolve(d);
+  var st=A.data.settings, tgl=tglSetting(st.kas_tgl_awal), raw=String(st.kas_saldo_awal===undefined?'':st.kas_saldo_awal).replace(/[^\d-]/g,'');
+  if (!tgl || raw==='') return Promise.resolve(d);
+  var awal=Number(raw)||0;
+  if (from<=tgl){ d.saldo={awal:awal, tglAwal:tgl, sebelum:null}; return Promise.resolve(d); }
+  var mulai=hariBerikut(tgl), sampai=hariSebelum(from);
+  if (mulai>sampai){ d.saldo={awal:awal, tglAwal:tgl, sebelum:awal}; return Promise.resolve(d); }
+  return api('adminReport', A.pin, mulai, sampai).then(function(x){
+    var net=0;
+    (x.orders||[]).forEach(function(o){ if (o.status!=='Batal' && o.statusBayar==='Lunas') net+=Number(o.nominal)||0; });
+    (x.entries||[]).forEach(function(e){ net += e.jenis==='Pemasukan' ? (Number(e.nominal)||0) : -(Number(e.nominal)||0); });
+    d.saldo={awal:awal, tglAwal:tgl, sebelum:awal+net}; return d;
+  });
+}
 function saldoInfo(d, c){
   var s=d.saldo; if (!s) return null;
   if (s.sebelum===null || s.sebelum===undefined) return {belum:true, tglAwal:s.tglAwal, awal:s.awal};
@@ -2111,7 +2137,7 @@ function editSaldoAwal(tglSaran){
   var sh=openSheet('<h3 class="serif">💼 Saldo Awal Kas</h3>' +
     '<p class="muted" style="margin:0 0 6px">Jumlah uang kas yang benar-benar ada di <b>akhir</b> tanggal di bawah. Mulai hari berikutnya, saldo dihitung otomatis.</p>' +
     '<label class="field"><span>SALDO KAS (Rp)</span><input class="input bignum" id="sa1" inputmode="numeric" value="'+fmtNum(s.kas_saldo_awal||'')+'" placeholder="0"></label>' +
-    '<label class="field"><span>PER AKHIR TANGGAL</span><input class="input" type="date" id="sa2" value="'+((typeof tglSaran==='string'&&tglSaran)||s.kas_tgl_awal||hariSebelum(todayISO()))+'"></label>' +
+    '<label class="field"><span>PER AKHIR TANGGAL</span><input class="input" type="date" id="sa2" value="'+((typeof tglSaran==='string'&&tglSaran)||tglSetting(s.kas_tgl_awal)||hariSebelum(todayISO()))+'"></label>' +
     '<div class="saldoarti" id="sa4"></div>' +
     '<div class="hint" style="text-align:left">Contoh: sisa kas Rp49.000 di akhir 11 Nov → isi Rp49.000, tanggal 11 Nov. Maka laporan 12 Nov menampilkan "Kas sebelumnya Rp49.000" + kas bersih 12 Nov.</div>' +
     '<button class="btn block" id="sa3" style="margin-top:10px">Simpan Saldo Awal</button>');
@@ -2127,7 +2153,7 @@ function editSaldoAwal(tglSaran){
     if (isNaN(n)){ toast('Isi saldo (boleh 0)',true); return; }
     if (!t){ toast('Pilih tanggal',true); return; }
     var b=this; b.disabled=true;
-    api('adminSaveSettings', A.pin, {kas_saldo_awal:String(n), kas_tgl_awal:t}).then(function(ns){ A.data.settings=ns; closeSheet(); toast('Saldo awal disimpan ✓'); kasLoad(); })
+    api('adminSaveSettings', A.pin, {kas_saldo_awal:String(n), kas_tgl_awal:(IS_GAS||USE_API?"'":'')+t}).then(function(ns){ A.data.settings=ns; closeSheet(); toast('Saldo awal disimpan ✓'); kasLoad(); })
       .catch(function(e){ b.disabled=false; toast(e.message,true); });
   };
 }
@@ -2765,7 +2791,7 @@ function tabKas(){
 }
 function kasLoad(){
   var r=kasRange(); var body=$('#kbody'); if(body) body.innerHTML='<div class="loading">Menghitung…</div>';
-  api('adminReport', A.pin, r[0], r[1]).then(function(d){ K.data=d; if (A.tab==='kas') kasRender(); })
+  api('adminReport', A.pin, r[0], r[1]).then(function(d){ return lengkapiSaldo(d, r[0]); }).then(function(d){ K.data=d; if (A.tab==='kas') kasRender(); })
     .catch(function(e){ if($('#kbody')) $('#kbody').innerHTML='<div class="empty">Gagal memuat: '+esc(e.message)+'<br><button class="btn" onclick="kasLoad()">Coba lagi</button></div>'; });
 }
 function kasCalc(orders, entries){
