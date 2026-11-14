@@ -440,6 +440,10 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 /* ---------- Pesanan langsung (kasir) ---------- */
 .posbtn{background:var(--ink);margin-bottom:12px;display:flex;flex-direction:column;line-height:1.2;padding:14px}
 .posbtn small{font-size:11px;font-weight:600;opacity:.8}
+.dkpick{display:grid;grid-template-columns:repeat(5,1fr);gap:5px}
+.dkpick button{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:8px 2px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink)}
+.dkpick button.gr{grid-column:span 2}
+.dkpick button.on{background:var(--brand);border-color:var(--brand);color:#fff}
 .poscats{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px}
 .poscats .chip{margin:0;padding:7px 3px;border-radius:10px;font-size:11px;line-height:1.15;white-space:normal;word-break:break-word;min-height:40px;display:flex;align-items:center;justify-content:center;text-align:center}
 .posgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;max-height:46vh;overflow:auto;padding:4px 2px 8px}
@@ -2535,7 +2539,15 @@ function posOpen(){
   }
   function totals(){
     var sub=0, n=0; Object.keys(P.cart).forEach(function(id){ var m=menu.filter(function(x){ return x.id===id; })[0]; if(!m) return; sub+=m.harga*P.cart[id].qty; n+=P.cart[id].qty; });
-    var dk=hitungDiskon(sub, rules); return {sub:sub, n:n, dk:dk, total:sub-dk.nominal};
+    var dk=hitungDiskon(sub, rules), manual=false;
+    if (P.dm && P.dm!=='auto'){
+      manual=true;
+      var nom = P.dm==='gratis' ? sub : P.dm==='rp' ? Math.min(sub, parseInt(String(P.drp||'').replace(/\D/g,''),10)||0) : Math.round(sub*Number(P.dm)/100);
+      var ket = P.dm==='gratis' ? 'Gratis karyawan' : P.dm==='rp' ? 'Potongan harga' : 'Diskon '+P.dm+'%';
+      if (P.dket && P.dm!=='gratis') ket += ' ('+String(P.dket).trim()+')';
+      dk={nominal:nom, ket:ket};
+    }
+    return {sub:sub, n:n, dk:dk, total:sub-dk.nominal, manual:manual, gratis:P.dm==='gratis'};
   }
   function drawCart(){
     var ids=Object.keys(P.cart), t=totals();
@@ -2546,15 +2558,23 @@ function posOpen(){
           '<input class="input" style="padding:6px 10px;font-size:13px" data-pn="'+id+'" maxlength="80" placeholder="+ catatan (pedas, tanpa es…)" value="'+esc(c.note||'')+'"></div>' +
           '<div class="step"><button data-pd="'+id+'" data-d="-1">−</button><span>'+c.qty+'</span><button data-pd="'+id+'" data-d="1">+</button></div></div>';
       }).join('') +
-      (t.dk.nominal ? '<div class="discline">🏷️ '+esc(t.dk.ket)+' <b>−'+rp(t.dk.nominal)+'</b></div>' : '') +
-      '<div class="sumrow"><span>Total</span><span class="price" style="font-size:22px">'+rp(t.total)+'</span></div>' +
+      (A.me.peran==='Owner' ? '<div class="field" style="margin-top:8px"><span>POTONGAN / DISKON</span><div class="dkpick" id="pdk">' +
+        [['auto','Normal'],['5','5%'],['10','10%'],['20','20%'],['50','50%'],['rp','Rp…'],['gratis','🎁 Gratis karyawan']].map(function(x){ return '<button type="button" data-dk="'+x[0]+'" class="'+((P.dm||'auto')===x[0]?'on':'')+(x[0]==='gratis'?' gr':'')+'">'+x[1]+'</button>'; }).join('') + '</div>' +
+        (P.dm==='rp' ? '<input class="input" id="pdrp" inputmode="numeric" placeholder="Potongan berapa rupiah? cth: 2000" value="'+fmtNum(P.drp||'')+'" style="margin-top:6px">' : '') +
+        (P.dm && P.dm!=='auto' && P.dm!=='gratis' ? '<input class="input" id="pdket" maxlength="30" placeholder="Alasan (boleh kosong), cth: langganan" value="'+esc(P.dket||'')+'" style="margin-top:6px">' : '') +
+        (t.gratis ? '<div class="hint" style="text-align:left;margin-top:6px">🎁 Tidak perlu bayar (Rp0). Stok bahan tetap berkurang dan tercatat sebagai <b>Gratis karyawan</b>. Tulis nama karyawan di kolom <b>NAMA</b>.</div>' : '') +
+        (t.manual && hitungDiskon(t.sub, rules).nominal ? '<div class="hint" style="text-align:left;margin-top:4px">Diskon otomatis diganti dengan potongan yang dipilih.</div>' : '') +
+        '</div>' : '') +
+      (t.dk.nominal ? '<div class="discline" id="pdl">🏷️ '+esc(t.dk.ket)+' <b>−'+rp(t.dk.nominal)+'</b></div>' : '<div id="pdl"></div>') +
+      '<div class="sumrow"><span>Total</span><span class="price" style="font-size:22px" id="ptot">'+rp(t.total)+'</span></div>' +
       '<div style="display:flex;gap:8px"><label class="field" style="flex:1;margin:4px 0"><span>MEJA</span><input class="input" id="pmj" maxlength="10" placeholder="cth: 3" value="'+esc(P.meja||'')+'"></label>' +
         '<label class="field" style="flex:1.4;margin:4px 0"><span>NAMA (opsional)</span><input class="input" id="pnm" maxlength="40" value="'+esc(P.nama||'')+'"></label></div>' +
       '<label class="chk2"><input type="checkbox" id="pbk"'+(P.bungkus?' checked':'')+'> 🛍️ Bawa pulang / dibungkus</label>' +
-      '<div class="field"><span>PEMBAYARAN</span><div class="paygrid" id="ppm">'+['Cash','QRIS','Transfer'].map(function(m){ return '<button type="button" data-m="'+m+'" class="'+(m===(P.metode||'Cash')?'on':'')+'"><i>'+PAY_ICON[m]+'</i>'+m+'</button>'; }).join('')+'</div></div>' +
-      ((P.metode||'Cash')==='Cash' ? '<label class="field"><span>UANG DITERIMA (untuk kembalian)</span><input class="input" id="puang" inputmode="numeric" placeholder="cth: 50000" value="'+fmtNum(P.uang||'')+'"></label>' +
+      (t.gratis ? '' : '<div class="field"><span>PEMBAYARAN</span><div class="paygrid" id="ppm">'+['Cash','QRIS','Transfer'].map(function(m){ return '<button type="button" data-m="'+m+'" class="'+(m===(P.metode||'Cash')?'on':'')+'"><i>'+PAY_ICON[m]+'</i>'+m+'</button>'; }).join('')+'</div></div>') +
+      ((P.metode||'Cash')==='Cash' && !t.gratis ? '<label class="field"><span>UANG DITERIMA (untuk kembalian)</span><input class="input" id="puang" inputmode="numeric" placeholder="cth: 50000" value="'+fmtNum(P.uang||'')+'"></label>' +
         '<div class="quick" id="pqk">'+[t.total,10000,20000,50000,100000].filter(function(v,i,a){ return v>=t.total && a.indexOf(v)===i; }).map(function(v){ return '<button type="button" data-v="'+v+'">'+rp(v)+'</button>'; }).join('')+'</div><div class="kembali" id="pkb"></div>' : '') +
-      '<div class="posbtns"><button class="btn" id="plunas" style="background:var(--ok)">✓ Simpan & LUNAS</button><button class="btn ghost" id="pnanti">Simpan, bayar nanti</button></div>' +
+      (t.gratis ? '<div class="posbtns"><button class="btn" id="plunas" style="background:var(--ok)">🎁 Simpan (Gratis)</button></div>' :
+      '<div class="posbtns"><button class="btn" id="plunas" style="background:var(--ok)">✓ Simpan & LUNAS</button><button class="btn ghost" id="pnanti">Simpan, bayar nanti</button></div>') +
       '<label class="chk2"><input type="checkbox" id="pstr"'+(P.struk!==false?' checked':'')+'> 🧾 Langsung tampilkan struk setelah lunas</label>';
     kemb();
   }
@@ -2576,21 +2596,30 @@ function posOpen(){
   var pk=$('#pk',sh);
   pk.addEventListener('click', function(e){ var t;
     if ((t=e.target.closest('[data-pd]'))){ keepForm(); add(t.dataset.pd, Number(t.dataset.d)); return; }
+    if ((t=e.target.closest('#pdk [data-dk]'))){ keepForm(); P.dm=t.dataset.dk; drawCart(); if(P.dm==='rp' && $('#pdrp',sh)) $('#pdrp',sh).focus(); return; }
     if ((t=e.target.closest('#ppm [data-m]'))){ keepForm(); P.metode=t.dataset.m; drawCart(); return; }
     if ((t=e.target.closest('#pqk [data-v]'))){ P.uang=t.dataset.v; $('#puang',sh).value=fmtNum(P.uang); kemb(); return; }
     if ((t=e.target.closest('#plunas'))){ keepForm(); simpan(true, t); return; }
     if ((t=e.target.closest('#pnanti'))){ keepForm(); simpan(false, t); return; }
   });
   pk.addEventListener('input', function(e){
+    if (e.target.id==='pdrp' || e.target.id==='pdket'){
+      if (e.target.id==='pdrp'){ e.target.value=fmtNum(e.target.value); P.drp=e.target.value.replace(/\D/g,''); } else P.dket=e.target.value;
+      var tt=totals(); $('#ptot',sh).textContent=rp(tt.total);
+      if ($('#pqk',sh)) $('#pqk',sh).innerHTML=[tt.total,10000,20000,50000,100000].filter(function(v,i,a){ return v>=tt.total && a.indexOf(v)===i; }).map(function(v){ return '<button type="button" data-v="'+v+'">'+rp(v)+'</button>'; }).join('');
+      $('#pdl',sh).innerHTML = tt.dk.nominal ? '🏷️ '+esc(tt.dk.ket)+' <b>−'+rp(tt.dk.nominal)+'</b>' : ''; $('#pdl',sh).className = tt.dk.nominal ? 'discline' : '';
+      kemb(); return; }
     if (e.target.id==='puang'){ e.target.value=fmtNum(e.target.value); P.uang=e.target.value.replace(/\D/g,''); kemb(); return; }
     var id=e.target.dataset.pn; if(id && P.cart[id]) P.cart[id].note=e.target.value;
   });
   pk.addEventListener('change', function(e){ var id=e.target.dataset.pv; if(id && P.cart[id]){ P.cart[id].pilih[e.target.dataset.base]=e.target.value; } });
   function simpan(lunas, btn){
     var ids=Object.keys(P.cart); if(!ids.length){ toast('Pesanan masih kosong',true); return; }
-    var meja=String(P.meja||'').trim() || (P.bungkus ? 'Bungkus' : '');
+    var meja=String(P.meja||'').trim() || (P.bungkus ? 'Bungkus' : P.dm==='gratis' ? 'Karyawan' : '');
     if (!meja){ toast('Isi nomor meja, atau centang "Bawa pulang"',true); $('#pmj',sh).focus(); return; }
-    var t=totals(), metode=P.metode||'Cash';
+    var t=totals(), metode=t.gratis ? 'Cash' : (P.metode||'Cash');
+    if (t.gratis) lunas=true;
+    if (P.dm==='rp' && !t.dk.nominal){ toast('Isi jumlah potongan (Rp)',true); return; }
     if (lunas && metode==='Cash' && P.uang && (parseInt(P.uang,10)||0) < t.total){ toast('Uang diterima kurang dari total',true); return; }
     var all=sh.querySelectorAll('#plunas,#pnanti'); Array.prototype.forEach.call(all,function(b){ b.disabled=true; }); btn.textContent='Menyimpan…';
     var catatan=(P.bungkus?'🛍️ BUNGKUS / BAWA PULANG':'');
@@ -2601,12 +2630,13 @@ function posOpen(){
     api('submitOrder', payload).then(function(r){
       var patch={status:'Diproses', metode:metode};
       patch.statusBayar = lunas ? 'Lunas' : 'Belum';
+      if (t.manual){ patch.diskon=t.dk.nominal; patch.ketDiskon = t.gratis && String(P.nama||'').trim() ? 'Gratis karyawan - '+String(P.nama).trim() : t.dk.ket; }
       return api('adminUpdateOrder', A.pin, r.id, patch);
     }).then(function(o){
       A.data.orders = A.data.orders.filter(function(x){ return x.id!==o.id; }).concat([o]);
       A.seen[o.id]=1;
       closeSheet(); renderTabsBar(); if (A.tab==='pesanan') tabOrders();
-      toast('Pesanan '+o.no+' tersimpan'+(lunas?' & LUNAS ✓':' (belum bayar)'));
+      toast('Pesanan '+o.no+' tersimpan'+(t.gratis?' (gratis karyawan) ✓':lunas?' & LUNAS ✓':' (belum bayar)'));
       if (lunas && P.struk!==false) openStruk(o.id);
       api('adminGetData', A.pin).then(function(d){ A.data.menu=d.menu; A.data.bahan=d.bahan||[]; }).catch(function(){});
     }).catch(function(e){
