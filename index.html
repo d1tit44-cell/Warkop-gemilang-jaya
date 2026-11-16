@@ -373,7 +373,25 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 .saldobox .sr1{display:flex;justify-content:space-between;gap:8px;padding:3px 0;font-size:14px}
 .saldobox .sr1.tot{border-top:1px dashed var(--line);margin-top:4px;padding-top:8px;font-weight:800;font-size:15px}
 .saldobox .sr1.tot b{font-family:Fraunces,serif;font-size:24px}
-.saldobox b.pos{color:var(--ok)}.saldoarti{background:#fff6dd;border:1px solid #ecd9a0;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.45;margin:4px 0 8px}.saldobox b.neg{color:var(--bad)}
+.saldobox b.pos{color:var(--ok)}.dtot{background:#1d1410;color:#fff;border-radius:16px;padding:12px 14px;margin:10px 0;text-align:center}
+.dtot small{display:block;opacity:.8;font-size:11.5px;letter-spacing:1px;font-weight:700}.dtot b{display:block;font-size:30px;font-family:Fraunces,Georgia,serif;line-height:1.2}.dtot i{display:block;font-style:normal;font-size:12px;opacity:.85}
+.dtwo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.dk{border:2px solid #e8dccd;border-radius:14px;padding:9px 10px;font-size:12.5px;color:#1d1410;background:#fff;display:flex;flex-direction:column}
+.dk h4{margin:0 0 5px;font-size:14px}.dk.w1{border-color:#d9a283;background:#fdf4ee}.dk.r1{border-color:#9db8d9;background:#f1f6fc}
+.dk.empty{background:#f6f3ef;border-color:#e0d6cc;color:#6b5a50;gap:6px}
+.dr{display:flex;justify-content:space-between;gap:4px;padding:1.5px 0}.dr b{font-weight:800;white-space:nowrap}
+.dr.in b{color:#2f7d4f}.dr.out b{color:#b3261e}.dr.sum{border-top:1px dashed #bba;margin-top:3px;padding-top:4px}
+.dr.big{border-top:2px solid #1d1410;margin-top:4px;padding-top:5px;font-size:13.5px}.dr.big b{font-size:14.5px}
+.dnote{font-size:11.5px;color:#8a786c;margin-top:4px}.dk .linkbtn{margin-top:auto;padding-top:6px;font-size:11.5px;text-align:left}
+.dmet{font-size:12px;color:#6b5a50;text-align:center;margin:3px 0}.dmet.warn{color:#b06a00}
+.dh{display:flex;justify-content:space-between;align-items:baseline;margin:12px 0 5px;font-size:14px}.dh small{font-weight:500;color:#6b5a50;font-size:11.5px}
+.dwarn{background:#fff4d6;border:1px solid #f0d58a;border-radius:10px;padding:6px 9px;font-size:12px;margin-bottom:5px}
+.dg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}@media(max-width:430px){.dg{grid-template-columns:repeat(2,1fr)}}.dg.g2{grid-template-columns:repeat(2,1fr)}
+.dg div{display:flex;justify-content:space-between;gap:4px;background:#f6f1ea;border-radius:7px;padding:4px 6px;font-size:11.5px;min-width:0}
+.dg span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.dg b{white-space:nowrap}.dg div.low{background:#fde3df;color:#9a1d14}
+.dft{margin-top:10px;font-size:11px;color:#8a786c;text-align:center;border-top:1px solid #eee;padding-top:6px}
+.drinci{margin-top:12px;border-top:2px solid #1d1410;padding-top:8px}.drinci summary{font-weight:800;cursor:pointer;padding:6px 0;color:#b9532c}
+.saldoarti{background:#fff6dd;border:1px solid #ecd9a0;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.45;margin:4px 0 8px}.saldobox b.neg{color:var(--bad)}
 .saldobox.empty{border-style:dashed;display:flex;flex-direction:column;gap:6px;font-size:13px}
 .saldobox.empty .btn{align-self:flex-start}
 .linkbtn{background:none;border:0;color:var(--muted);font-size:12px;padding:6px 0 0;text-decoration:underline}
@@ -1961,15 +1979,13 @@ function lapData(d){
           masukLain:Object.keys(masukLain).map(function(k){ return masukLain[k]; }), stok:(d.stok||[])};
 }
 function renderLaporan(sh, d, label, from, to){
-  var L=lapData(d), c=L.c, s=A.data.settings, now=new Date();
+  var L=lapData(d), c=L.c, s=A.data.settings, now=new Date(), R=lapRingkas(d);
   var jam=('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
   var totQty=L.jual.reduce(function(a,x){ return a+x.qty; },0), totRp=L.jual.reduce(function(a,x){ return a+x.rp; },0);
   var html='<div class="lap" id="lapcard">' +
     '<div class="laph"><img src="'+esc(logoSrc(s))+'" alt=""><div><b>'+esc(s.nama_warkop||'')+'</b><span>LAPORAN '+(from===to?'HARIAN':'PERIODE')+'</span><small>'+esc(label)+' · dibuat '+jam+' oleh '+esc(A.me.nama)+'</small></div></div>' +
-    (L.saldo && !L.saldo.belum ? '<div class="lsec lsaldo"><h4>💼 Saldo Kas</h4>' +
-      '<div class="lr"><span>'+(from===to?'Kas sebelumnya (s/d '+fmtTgl(hariSebelum(from)).replace(/ \d{4}$/,'')+')':'Saldo awal periode')+'</span><b>'+rp(L.saldo.sebelum)+'</b></div>' +
-      '<div class="lr"><span>Kas bersih '+(from===to?'hari ini':'periode ini')+'</span><b>'+(c.bersih>=0?'+':'')+rp(c.bersih)+'</b></div>' +
-      '<div class="lr tot big"><span>SALDO KAS '+(from===to?'SEKARANG':'AKHIR')+'</span><b>'+rp(L.saldo.akhir)+'</b></div></div>' : '') +
+    ringkasHtml(R, from===to) +
+    '<details class="drinci"><summary>📋 Lihat rincian lengkap (per menu, stok, pengeluaran)</summary>' +
     '<div class="lsec"><h4>💰 Ringkasan '+(from===to?'Hari Ini':'Periode')+'</h4>' +
       '<div class="lr"><span>Penjualan (lunas, '+c.trx+' transaksi)</span><b>'+rp(c.jual)+'</b></div>' +
       (L.diskon?'<div class="lr lsub"><span>sudah termasuk diskon diberikan</span><span>−'+rp(L.diskon)+'</span></div>':'') +
@@ -1994,16 +2010,14 @@ function renderLaporan(sh, d, label, from, to){
         b.rincian.map(function(x){ return '<div class="lr lsub"><span>'+esc(x.nama)+' '+fmtQty(x.jumlah)+(x.satuan?' '+esc(x.satuan):'')+(x.bahan&&x.isi?' <small>(+'+fmtQty(x.jumlah*x.isi)+' stok)</small>':'')+'</span><span>'+rp(x.harga)+'</span></div>'; }).join(''); }).join('') +
       (L.keluar.length || L.belanja.length ? L.keluar.map(function(x){ return '<div class="lr"><span>'+esc(x.kat)+(x.n>1?' ('+x.n+'×)':'')+(x.cat.length?'<small> · '+esc(x.cat.slice(0,3).join('; '))+'</small>':'')+'</span><b>'+rp(x.rp)+'</b></div>'; }).join('') +
         '<div class="lr tot sm"><span>Total</span><b>'+rp(c.keluar)+'</b></div>' : '<div class="lnote">Tidak ada pengeluaran.</div>') +
-    '</div></div>' +
+    '</div></details></div>' +
     '<div class="lapbtn"><button class="btn" id="limg2" style="background:#25a244">🖼️ Kirim sebagai Gambar (paling mudah dibaca)</button>' +
-      '<button class="btn ghost" id="lprint">📄 Simpan sebagai PDF</button><button class="btn ghost" id="lcopy">📋 Salin teks untuk WhatsApp</button></div>' +
-    '<div class="hint" style="text-align:left">Saran: kirim sebagai <b>gambar</b> — bos cukup membuka seperti foto biasa, rapi dan tidak perlu aplikasi lain.</div>';
+      '<button class="btn ghost" id="lcopy">📋 Salin teks untuk WhatsApp</button></div>' +
+    '<div class="hint" style="text-align:left">Saran: kirim sebagai <b>gambar</b>. Di WhatsApp ketuk tulisan <b>HD</b> di atas sebelum mengirim supaya tetap tajam.</div>';
   html = '<button class="btn block" id="limg" style="background:#25a244;margin-bottom:12px">🖼️ Kirim Laporan sebagai Gambar</button>' + html;
-  if (!L.saldo || L.saldo.belum) html = '<div class="saldobox empty" style="margin-bottom:12px"><b>⚠️ Kas sebelumnya belum ikut dihitung</b><span>' +
-    (!L.saldo ? 'Saldo awal kas belum diisi, jadi laporan hanya menampilkan uang hari ini.' : 'Saldo awal diisi per akhir '+fmtTgl(L.saldo.tglAwal)+', jadi laporan tanggal ini belum memakai saldo.') +
-    ' Isi <b>saldo awal</b> = uang kas yang benar-benar ada di akhir hari <b>sebelum</b> laporan ini.</span><button class="btn sm" id="lsaldo">Isi Saldo Awal</button></div>' + html;
   $('#lapw',sh).innerHTML=html;
-  if ($('#lsaldo',sh)) $('#lsaldo',sh).onclick=function(){ closeSheet(); editSaldoAwal(from===to ? hariSebelum(from) : null); };
+  bindSaldoBtns($('#lapw',sh), function(){ closeSheet(); });
+  Array.prototype.forEach.call($('#lapw',sh).querySelectorAll('[data-sa]'), function(b){ b.onclick=function(){ closeSheet(); editSaldoAwal(from===to ? hariSebelum(from) : null, b.dataset.sa); }; });
   $('#lcopy',sh).onclick=function(){
     var t=['*LAPORAN '+(from===to?'HARIAN':'PERIODE')+' '+(s.nama_warkop||'').toUpperCase()+'*', label, 'Dibuat '+jam+' oleh '+A.me.nama, '',
       ];
@@ -2017,12 +2031,12 @@ function renderLaporan(sh, d, label, from, to){
     if (L.stok.length){ t.push('', '*STOK BAHAN* (awal / masuk / keluar / sisa)'); L.stok.forEach(function(x){ t.push('- '+x.nama+': '+fmtQty(x.awal)+' / +'+fmtQty(x.masuk)+' / -'+fmtQty(x.terjual-x.batal)+' / *'+fmtQty(x.akhir)+' '+x.satuan+'*'+(x.akhir<=x.minimal?' ⚠️':'')+(x.koreksi?' (koreksi '+fmtQty(x.koreksi)+')':'')); }); }
     if (L.keluar.length || L.belanja.length){ t.push('', '*PENGELUARAN*');
       L.belanja.forEach(function(b){ t.push('- '+b.kategori+(from!==to?' ('+fmtTgl(b.tanggal)+')':'')+': '+rp(b.nominal)); b.rincian.forEach(function(x){ t.push('   • '+x.nama+' '+fmtQty(x.jumlah)+(x.satuan?' '+x.satuan:'')+' = '+rp(x.harga)); }); }); L.keluar.forEach(function(x){ t.push('- '+x.kat+(x.n>1?' ('+x.n+'x)':'')+': '+rp(x.rp)+(x.cat.length?' — '+x.cat.slice(0,3).join('; '):'')); }); }
-    var text=t.join('\n'), btn=this;
+    var text=ringkasTeks(R, label, from===to, jam), btn=this;
     function ok(){ btn.textContent='✓ Tersalin! Tempel di WhatsApp'; btn.style.background='var(--ok)'; }
     try { navigator.clipboard.writeText(text).then(ok, function(){ fallbackCopy(text) ? ok() : showText(text); }); } catch(e){ fallbackCopy(text) ? ok() : showText(text); }
   };
   $('#limg',sh).onclick=$('#limg2',sh).onclick=function(){ bukaLaporanGambar(d, label, from, to); };
-  $('#lprint',sh).onclick=function(){
+  if ($('#lprint',sh)) $('#lprint',sh).onclick=function(){
     var info=openSheet('<h3 class="serif">📄 Simpan sebagai PDF</h3>' +
       '<ol class="pdfsteps"><li>Tekan <b>Lanjut</b> — layar cetak akan terbuka.</li><li>Di <b>bagian paling atas</b>, ketuk nama printer (mis. <i>RawBT</i> / printer struk).</li><li>Ganti menjadi <b>"Simpan sebagai PDF"</b>.</li><li>Ketuk tombol bulat <b>PDF ⬇️</b>, lalu simpan.</li></ol>' +
       '<div class="hint" style="text-align:left">File PDF tersimpan di folder <b>Download</b> dan bisa dikirim lewat WhatsApp sebagai dokumen. Kalau terlalu ribet, pakai saja <b>Kirim sebagai Gambar</b>.</div>' +
@@ -2035,111 +2049,221 @@ function renderLaporan(sh, d, label, from, to){
 }
 function fallbackCopy(text){ try{ var ta=document.createElement('textarea'); ta.value=text; ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta); ta.select(); var ok=document.execCommand('copy'); ta.remove(); return ok; }catch(e){ return false; } }
 
-/* ---------- Laporan sebagai GAMBAR (rapi, siap kirim WhatsApp) ---------- */
-function laporanGambar(d, label, from, to){
-  var L=lapData(d), c=L.c, s=A.data.settings, now=new Date();
-  var jam=('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
-  var W=1080, P=56, F='"Plus Jakarta Sans", "Segoe UI", Roboto, Arial, sans-serif', FS='Fraunces, Georgia, serif';
-  var cv=document.createElement('canvas'); cv.width=W; cv.height=9000;
-  var g=cv.getContext('2d'); g.fillStyle='#ffffff'; g.fillRect(0,0,W,cv.height); g.textBaseline='alphabetic';
-  var y=0;
-  function font(sz, w, fam){ g.font=(w||'500')+' '+sz+'px '+(fam||F); }
-  function txt(t, x, yy, sz, w, col, align, fam){ font(sz,w,fam); g.fillStyle=col||'#1d1410'; g.textAlign=align||'left'; g.fillText(t, x, yy); }
-  function fit(t, maxW, sz, w){ font(sz,w); t=String(t); if (g.measureText(t).width<=maxW) return t; while(t.length>1 && g.measureText(t+'…').width>maxW) t=t.slice(0,-1); return t+'…'; }
-  function hr(yy, col, dash){ g.strokeStyle=col||'#d9cdbb'; g.lineWidth=2; g.setLineDash(dash?[10,8]:[]); g.beginPath(); g.moveTo(P,yy); g.lineTo(W-P,yy); g.stroke(); g.setLineDash([]); }
-  function box(x,yy,w,h,r,fill){ g.fillStyle=fill; g.beginPath(); g.moveTo(x+r,yy); g.arcTo(x+w,yy,x+w,yy+h,r); g.arcTo(x+w,yy+h,x,yy+h,r); g.arcTo(x,yy+h,x,yy,r); g.arcTo(x,yy,x+w,yy,r); g.closePath(); g.fill(); }
-  function row(l, r, opt){ opt=opt||{}; var sz=opt.sz||32; y+=opt.gap||50;
-    var rw=0; if (r){ font(sz, opt.bold?'800':'700'); rw=g.measureText(r).width; }
-    txt(fit(l, W-2*P-rw-30-(opt.indent||0), sz, opt.bold?'800':'500'), P+(opt.indent||0), y, sz, opt.bold?'800':'500', opt.lcol||'#1d1410');
-    if (r) txt(r, W-P, y, sz, opt.bold?'800':'700', opt.rcol||'#1d1410', 'right'); }
-  function section(t){ y+=78; txt(t, P, y, 36, '800', '#b8532a'); y+=18; hr(y,'#1d1410'); }
-  function rupiah(n){ return rp(n); }
-
-  return new Promise(function(res){
-    var img=new Image();
-    img.onload=img.onerror=function(){ draw(img.naturalWidth?img:null); res(cv); };
-    var src=logoSrc(s); img.src = /^data:/.test(src) ? src : DEFAULT_LOGO;   // logo luar bisa memblokir gambar → pakai logo bawaan
-  });
-
-  function draw(logo){
-    // Kepala
-    box(0,0,W,250,0,'#2b1d14');
-    if (logo) g.drawImage(logo, P, 40, 170, 170);
-    var tx=logo?P+200:P;
-    txt(fit(s.nama_warkop||'Warkop', W-tx-P, 52, '800', FS), tx, 105, 52, '800', '#ffffff', 'left', FS);
-    txt('LAPORAN '+(from===to?'HARIAN':'PERIODE'), tx, 155, 32, '800', '#f0b35a');
-    txt(fit(label, W-tx-P, 28, '500'), tx, 198, 28, '500', '#e9dccb');
-    txt('Dibuat '+jam+' oleh '+A.me.nama, tx, 234, 24, '500', '#b9a894');
-    y=250;
-
-    // Saldo kas
-    if (L.saldo && !L.saldo.belum){
-      y+=36; box(P-16, y, W-2*P+32, 250, 24, '#f6efe4'); var y0=y;
-      y+=14; txt('💼 SALDO KAS', P+8, y+44, 34, '800', '#1d1410'); y+=44;
-      row((from===to?'Kas sebelumnya':'Saldo awal periode'), rupiah(L.saldo.sebelum), {indent:8});
-      row('Kas bersih '+(from===to?'hari ini':'periode ini'), (c.bersih>=0?'+':'')+rupiah(c.bersih), {indent:8, rcol:c.bersih<0?'#b03a2e':'#2f7d4f'});
-      y+=20; g.strokeStyle='#1d1410'; g.lineWidth=2; g.beginPath(); g.moveTo(P+8,y); g.lineTo(W-P-8,y); g.stroke();
-      y+=58; txt('SALDO KAS '+(from===to?'SEKARANG':'AKHIR'), P+8, y, 34, '800'); txt(rupiah(L.saldo.akhir), W-P-8, y, 46, '800', '#1d1410', 'right', FS);
-      y=y0+250;
-    }
-
-    // Ringkasan
-    section('💰 RINGKASAN '+(from===to?'HARI INI':'PERIODE'));
-    row('Penjualan lunas ('+c.trx+' transaksi)', rupiah(c.jual));
-    if (L.diskon) row('   sudah termasuk diskon', '−'+rupiah(L.diskon), {sz:26, lcol:'#6b5a4c', rcol:'#6b5a4c', gap:40});
-    L.masukLain.forEach(function(x){ row('Pemasukan lain: '+x.kat, rupiah(x.rp)); });
-    row('Total pengeluaran', '−'+rupiah(c.keluar), {rcol:'#b03a2e'});
-    y+=22; hr(y,'#1d1410');
-    row('KAS BERSIH', rupiah(c.bersih), {bold:true, sz:38, gap:58});
-    // metode
-    y+=30; var bw=(W-2*P-32)/3;
-    ['Cash','QRIS','Transfer'].forEach(function(m,i){ var x=P+i*(bw+16); box(x,y,bw,110,18,'#f6efe4');
-      txt(m, x+20, y+42, 26, '700', '#6b5a4c'); txt(fit(rupiah(c.met[m]||0), bw-40, 34, '800'), x+20, y+88, 34, '800'); });
-    y+=110;
-    if (c.belum){ y+=24; box(P,y,W-2*P,64,14,'#fbecd0'); txt(fit('⏳ '+c.belum+' pesanan belum dibayar ('+rupiah(c.belumRp)+') — belum dihitung', W-2*P-40, 26, '600'), P+20, y+42, 26, '600', '#7a5210'); y+=64; }
-
-    // Penjualan per menu
-    section('🍜 PENJUALAN PER MENU');
-    if (L.jual.length){
-      y+=46; txt('Menu', P, y, 24, '800', '#6b5a4c'); txt('Qty', W-P-260, y, 24, '800', '#6b5a4c', 'right'); txt('Jumlah', W-P, y, 24, '800', '#6b5a4c', 'right');
-      var tq=0, tr=0;
-      L.jual.forEach(function(x,i){ y+=48; if (i%2===0) box(P-10, y-34, W-2*P+20, 46, 8, '#faf6ef');
-        txt(fit(x.nama, W-2*P-330, 30, '500'), P, y, 30, '500'); txt(String(x.qty), W-P-260, y, 30, '700', '#1d1410', 'right'); txt(rupiah(x.rp).replace('Rp',''), W-P, y, 30, '700', '#1d1410', 'right'); tq+=x.qty; tr+=x.rp; });
-      y+=20; hr(y,'#1d1410'); y+=46; txt('TOTAL', P, y, 30, '800'); txt(String(tq), W-P-260, y, 30, '800', '#1d1410', 'right'); txt(rupiah(tr).replace('Rp',''), W-P, y, 30, '800', '#1d1410', 'right');
-      if (L.diskon){ y+=38; txt('*harga sebelum diskon', P, y, 22, '500', '#6b5a4c'); }
-    } else { y+=50; txt('Belum ada penjualan.', P, y, 28, '500', '#6b5a4c'); }
-
-    // Stok bahan
-    section('📦 STOK BAHAN');
-    if (L.stok.length){
-      var cx=[W-P-390, W-P-260, W-P-130, W-P];
-      y+=46; txt('Bahan', P, y, 24, '800', '#6b5a4c'); ['Awal','Masuk','Keluar','Sisa'].forEach(function(h,i){ txt(h, cx[i], y, 24, '800', '#6b5a4c', 'right'); });
-      L.stok.forEach(function(x,i){ var kel=x.terjual-x.batal, low=x.akhir<=x.minimal; y+=48;
-        if (low) box(P-10, y-34, W-2*P+20, 46, 8, '#fff1dc'); else if (i%2===0) box(P-10, y-34, W-2*P+20, 46, 8, '#faf6ef');
-        txt(fit((low?'⚠ ':'')+x.nama, cx[0]-P-110, 28, low?'700':'500'), P, y, 28, low?'700':'500', low?'#9a5a00':'#1d1410');
-        txt(fmtQty(x.awal), cx[0], y, 28, '500', '#1d1410', 'right'); txt(x.masuk?'+'+fmtQty(x.masuk):'-', cx[1], y, 28, '600', '#2f7d4f', 'right');
-        txt(kel?'−'+fmtQty(kel):'-', cx[2], y, 28, '600', '#b03a2e', 'right'); txt(fmtQty(x.akhir), cx[3], y, 30, '800', '#1d1410', 'right'); });
-      y+=40; txt('⚠ = stok menipis (di bawah batas minimal)', P, y, 22, '500', '#6b5a4c');
-    } else { y+=50; txt('Belum ada data stok.', P, y, 28, '500', '#6b5a4c'); }
-
-    // Pengeluaran
-    section('🧾 PENGELUARAN');
-    if (L.belanja.length || L.keluar.length){
-      L.belanja.forEach(function(b){ row('🛒 '+b.kategori+(from!==to?' ('+fmtTgl(b.tanggal)+')':''), rupiah(b.nominal), {bold:true, sz:30});
-        b.rincian.forEach(function(x){ row('• '+x.nama+' '+fmtQty(x.jumlah)+(x.satuan?' '+x.satuan:''), rupiah(x.harga), {sz:26, indent:24, gap:40, lcol:'#4a3a2e', rcol:'#4a3a2e'}); }); });
-      L.keluar.forEach(function(x){ row(x.kat+(x.n>1?' ('+x.n+'×)':'')+(x.cat.length?' — '+x.cat.slice(0,2).join('; '):''), rupiah(x.rp), {sz:30}); });
-      y+=22; hr(y,'#1d1410'); row('Total pengeluaran', rupiah(c.keluar), {bold:true, sz:32, gap:52});
-    } else { y+=50; txt('Tidak ada pengeluaran.', P, y, 28, '500', '#6b5a4c'); }
-
-    // Kaki
-    y+=70; hr(y,'#d9cdbb',true); y+=46;
-    txt((s.nama_warkop||'')+' · dibuat dari aplikasi Kasir Warkop', W/2, y, 22, '500', '#9b8a78', 'center');
-    y+=40;
-    // potong tinggi kanvas sesuai isi
-    var out=document.createElement('canvas'); out.width=W; out.height=Math.ceil(y);
-    out.getContext('2d').drawImage(cv,0,0); cv=out;
-  }
+/* ---------- Kas Warkop & Kas Rokok terpisah ----------
+   Pemisahan dimulai SETELAH tanggal saldo awal Kas Rokok (kas_rokok_tgl).
+   Sebelum tanggal itu (atau bila belum diisi) semua uang dihitung sebagai Kas Warkop, seperti dulu. */
+function rokokMulai(){ return tglSetting(A.data.settings.kas_rokok_tgl); }
+function pisahHari(tgl){ var m=rokokMulai(); return !!m && String(tgl)>m; }
+function isRokokItem(i){
+  var m=A.data.menu.filter(function(x){ return x.id===i.id; })[0] || A.data.menu.filter(function(x){ return x.nama===i.nama; })[0];
+  if (m) return /^\s*rokok\s*$/i.test(m.kategori||'');
+  return /\((batang|bungkus)\)\s*$/i.test(i.nama||'');
 }
+function isRokokEntry(e){ return /rokok/i.test(e && e.kategori || ''); }
+function bagianRokok(o){
+  if (!pisahHari(o.tgl)) return 0;
+  var sub=0, rk=0;
+  (o.items||[]).forEach(function(i){ var v=(Number(i.qty)||0)*(Number(i.harga)||0); sub+=v; if (isRokokItem(i)) rk+=v; });
+  if (!rk) return 0;
+  var nom=Number(o.nominal)||0; return rk>=sub ? nom : Math.round(nom*rk/sub);
+}
+function kasDuo(orders, entries){
+  var k={w:{masuk:0,keluar:0}, r:{masuk:0,keluar:0}};
+  (orders||[]).forEach(function(o){ if (o.status==='Batal' || o.statusBayar!=='Lunas') return;
+    var n=Number(o.nominal)||0, r=bagianRokok(o); k.r.masuk+=r; k.w.masuk+=n-r; });
+  (entries||[]).forEach(function(e){ var x = pisahHari(e.tanggal) && isRokokEntry(e) ? k.r : k.w;
+    if (e.jenis==='Pemasukan') x.masuk+=Number(e.nominal)||0; else x.keluar+=Number(e.nominal)||0; });
+  k.w.bersih=k.w.masuk-k.w.keluar; k.r.bersih=k.r.masuk-k.r.keluar;
+  return k;
+}
+function saldoCfg(j){
+  var s=A.data.settings, t=tglSetting(j==='r'?s.kas_rokok_tgl:s.kas_tgl_awal), v=j==='r'?s.kas_rokok_awal:s.kas_saldo_awal;
+  var raw=String(v===undefined||v===null?'':v).replace(/[^\d-]/g,'');
+  return (t && raw!=='') ? {tgl:t, awal:Number(raw)||0} : null;
+}
+/* hitung sisa kas (warkop & rokok) sebelum tanggal "from" */
+function lengkapiSaldo(d, from){
+  var cfg={w:saldoCfg('w'), r:saldoCfg('r')}; d.duo={w:null, r:null};
+  ['w','r'].forEach(function(j){ var c=cfg[j]; if (c) d.duo[j]={awal:c.awal, tgl:c.tgl, sebelum: from<=c.tgl ? null : c.awal}; });
+  var perlu=['w','r'].filter(function(j){ return cfg[j] && from>cfg[j].tgl; });
+  function gabung(d){ var w=d.duo.w, r=d.duo.r;
+    if (w && w.sebelum!==null && (!rokokMulai() || (r && r.sebelum!==null))) d.saldo={awal:w.awal, tglAwal:w.tgl, sebelum:w.sebelum+(r&&r.sebelum!==null?r.sebelum:0)};
+    else if (w) d.saldo={awal:w.awal, tglAwal:w.tgl, sebelum:null};
+    return d; }
+  if (!perlu.length) return Promise.resolve(gabung(d));
+  var mulai=hariBerikut(perlu.map(function(j){ return cfg[j].tgl; }).sort()[0]), sampai=hariSebelum(from);
+  if (mulai>sampai) return Promise.resolve(gabung(d));
+  return api('adminReport', A.pin, mulai, sampai).then(function(x){
+    perlu.forEach(function(j){ var t=cfg[j].tgl;
+      var k=kasDuo((x.orders||[]).filter(function(o){ return String(o.tgl)>t; }), (x.entries||[]).filter(function(e){ return String(e.tanggal)>t; }));
+      d.duo[j].sebelum = cfg[j].awal + k[j].bersih; });
+    return gabung(d);
+  });
+}
+/* model untuk tampilan: status ok / none (belum diisi) / early (periode sebelum tanggal saldo awal) */
+function duoModel(d){
+  var k=kasDuo(d.orders, d.entries), duo=d.duo||{}, pisah=!!rokokMulai();
+  function one(j){ var s=duo[j], x=k[j];
+    var st = !s ? 'none' : (s.sebelum===null || s.sebelum===undefined) ? 'early' : 'ok';
+    return {status:st, sebelum:st==='ok'?s.sebelum:0, masuk:x.masuk, keluar:x.keluar, bersih:x.bersih, akhir:st==='ok'?s.sebelum+x.bersih:null, awal:s?s.awal:0, tgl:s?s.tgl:''}; }
+  var w=one('w'), r=one('r');
+  if (!pisah) r.status='none';
+  var total = w.status==='ok' && (r.status==='ok' || !pisah) ? w.akhir + (r.status==='ok'?r.akhir:0) : null;
+  return {w:w, r:r, pisah:pisah, total:total};
+}
+function duoCardHtml(M, harian, idPrefix){
+  idPrefix=idPrefix||'k';
+  function card(j, x){
+    var nm = j==='w' ? '☕ Kas Warkop' : '🚬 Kas Rokok';
+    if (j==='r' && !M.pisah) return '<div class="dk r1 empty"><h4>'+nm+'</h4><span>Belum dipisah. Isi <b>saldo awal Kas Rokok</b> untuk mulai memisahkan uang rokok.</span><button class="btn sm" data-sa="r">Isi Saldo Awal Rokok</button></div>';
+    var head='<div class="dk '+(j==='w'?'w1':'r1')+'"><h4>'+nm+'</h4>';
+    var rows = (x.status==='ok' ? '<div class="dr"><span>'+(harian?'Kemarin':'Awal')+'</span><b>'+rp(x.sebelum)+'</b></div>' : '') +
+      '<div class="dr in"><span>Masuk</span><b>+'+rp(x.masuk)+'</b></div>' +
+      '<div class="dr out"><span>Keluar</span><b>−'+rp(x.keluar)+'</b></div>' +
+      '<div class="dr sum"><span>Bersih</span><b>'+(x.bersih>=0?'+':'')+rp(x.bersih)+'</b></div>' +
+      (x.status==='ok' ? '<div class="dr big"><span>Saldo</span><b>'+rp(x.akhir)+'</b></div>' :
+        '<div class="dnote">'+(x.status==='none'?'Saldo awal belum diisi':'Saldo awal berlaku mulai '+fmtTgl(hariBerikut(x.tgl)))+'</div>');
+    return head+rows+'<button class="linkbtn" data-sa="'+j+'">⚙️ '+(x.status==='none'?'Isi saldo awal':'Saldo awal '+rp(x.awal)+' per '+fmtTgl(x.tgl).replace(/ \d{4}$/,''))+'</button></div>';
+  }
+  return (M.total!==null ? '<div class="dtot"><small>💼 TOTAL UANG KAS '+(harian?'SEKARANG':'AKHIR')+'</small><b>'+rp(M.total)+'</b>' +
+      (M.pisah?'<i>Kas Warkop '+rp(M.w.akhir)+' + Kas Rokok '+rp(M.r.akhir)+'</i>':'')+'</div>' : '') +
+    '<div class="dtwo">'+card('w', M.w)+card('r', M.r)+'</div>';
+}
+function bindSaldoBtns(root, after){
+  Array.prototype.forEach.call(root.querySelectorAll('[data-sa]'), function(b){ b.onclick=function(){ if(after) after(); editSaldoAwal(null, b.dataset.sa); }; });
+}
+
+/* ---------- Laporan ringkas (layar + gambar) ---------- */
+function lapRingkas(d){
+  var L=lapData(d), M=duoModel(d), c=L.c;
+  var keluar=[]; L.belanja.forEach(function(b){ keluar.push([b.kategori, b.nominal]); }); L.keluar.forEach(function(x){ keluar.push([x.kat+(x.n>1?' '+x.n+'×':''), x.rp]); });
+  var masuk=L.masukLain.map(function(x){ return [x.kat, x.rp]; });
+  var stokW=[], stokR=[];
+  L.stok.forEach(function(x){
+    var b=bahanById(x.id) || {satuan:x.satuan}, isi=isiBks(b)||isiBks(x), low=x.akhir<=x.minimal;
+    if (isi) stokR.push({nama:x.nama, q:pecahBks({satuan:'isi'+isi}, x.akhir), low:low, n:x.akhir});
+    else stokW.push({nama:x.nama, q:fmtQty(x.akhir), low:low, n:x.akhir});
+  });
+  var urut=function(a,b){ return (b.low-a.low) || a.nama.localeCompare(b.nama); };
+  stokW.sort(urut); stokR.sort(urut);
+  return {L:L, M:M, c:c, keluar:keluar, masuk:masuk, stokW:stokW, stokR:stokR,
+    perluBeli: stokW.concat(stokR).filter(function(x){ return x.low; }).sort(function(a,b){ return a.n-b.n; })};
+}
+function ringkasHtml(R, harian){
+  var c=R.c;
+  return duoCardHtml(R.M, harian, 'l') +
+    '<div class="dmet">'+(harian?'Hari ini':'Periode')+': 💵 Cash '+rp(c.met.Cash||0)+' · 📱 QRIS '+rp(c.met.QRIS||0)+' · 🏦 Transfer '+rp(c.met.Transfer||0)+' · '+c.trx+' transaksi</div>' +
+    (R.masuk.length?'<div class="dmet">Pemasukan lain: '+R.masuk.map(function(x){ return esc(x[0])+' '+rp(x[1]); }).join(' · ')+'</div>':'') +
+    '<div class="dmet">Pengeluaran: '+(R.keluar.length?R.keluar.map(function(x){ return esc(x[0])+' '+rp(x[1]); }).join(' · '):'tidak ada')+'</div>' +
+    (c.belum?'<div class="dmet warn">⏳ '+c.belum+' pesanan belum dibayar ('+rp(c.belumRp)+') — belum dihitung</div>':'') +
+    '<h4 class="dh">📦 Sisa Stok Warkop <small>'+R.stokW.length+' jenis</small></h4>' +
+    (R.perluBeli.length?'<div class="dwarn">⚠️ <b>Perlu beli:</b> '+R.perluBeli.map(function(x){ return esc(x.nama)+' '+esc(x.q); }).join(' · ')+'</div>':'') +
+    (R.stokW.length?'<div class="dg">'+R.stokW.map(function(x){ return '<div class="'+(x.low?'low':'')+'"><span>'+esc(x.nama)+'</span><b>'+esc(x.q)+'</b></div>'; }).join('')+'</div>':'<div class="lnote">Belum ada data stok.</div>') +
+    (R.stokR.length?'<h4 class="dh">🚬 Sisa Stok Rokok <small>'+R.stokR.length+' jenis</small></h4><div class="dg g2">'+R.stokR.map(function(x){ return '<div class="'+(x.low?'low':'')+'"><span>'+esc(x.nama)+'</span><b>'+esc(x.q)+'</b></div>'; }).join('')+'</div>':'') +
+    '<div class="dft">Rincian per menu & per transaksi tersimpan di aplikasi kasir</div>';
+}
+function ringkasTeks(R, label, harian, jam){
+  var s=A.data.settings, c=R.c, M=R.M, t=['*LAPORAN '+(harian?'HARIAN':'PERIODE')+' '+(s.nama_warkop||'').toUpperCase()+'*', label+' · dibuat '+jam+' oleh '+A.me.nama, ''];
+  if (M.total!==null) t.push('💼 *TOTAL UANG KAS: '+rp(M.total)+'*', '');
+  function kas(nm, x){ t.push('*'+nm+'*'); if (x.status==='ok') t.push((harian?'Sisa kemarin: ':'Saldo awal: ')+rp(x.sebelum));
+    t.push('Masuk: +'+rp(x.masuk), 'Keluar: -'+rp(x.keluar)); if (x.status==='ok') t.push('*Saldo: '+rp(x.akhir)+'*'); t.push(''); }
+  kas('☕ KAS WARKOP', M.w); if (M.pisah) kas('🚬 KAS ROKOK', M.r);
+  t.push('Cash '+rp(c.met.Cash||0)+' | QRIS '+rp(c.met.QRIS||0)+' | Transfer '+rp(c.met.Transfer||0)+' | '+c.trx+' trx');
+  if (R.keluar.length) t.push('Pengeluaran: '+R.keluar.map(function(x){ return x[0]+' '+rp(x[1]); }).join(', '));
+  if (c.belum) t.push('Belum dibayar: '+c.belum+' pesanan ('+rp(c.belumRp)+')');
+  if (R.perluBeli.length) t.push('', '⚠️ *Perlu beli:* '+R.perluBeli.map(function(x){ return x.nama+' '+x.q; }).join(', '));
+  t.push('', '*SISA STOK*'); t.push(R.stokW.map(function(x){ return x.nama+' '+x.q; }).join(', '));
+  if (R.stokR.length){ t.push('', '*SISA ROKOK*'); t.push(R.stokR.map(function(x){ return x.nama+' '+x.q; }).join(', ')); }
+  return t.join('\n');
+}
+/* gambar laporan ringkas: lebar 540 (×2 = 1080 px), tinggi menyesuaikan isi */
+function laporanGambar(d, label, from, to){
+  var R=lapRingkas(d), M=R.M, c=R.c, s=A.data.settings, harian=from===to, now=new Date();
+  var jam=('0'+now.getHours()).slice(-2)+':'+('0'+now.getMinutes()).slice(-2);
+  var W=540, P=22, SC=2, F='"Plus Jakarta Sans", "Segoe UI", Roboto, Arial, sans-serif', FS='Fraunces, Georgia, serif';
+  var cv=document.createElement('canvas'); cv.width=W*SC; cv.height=3600*SC;
+  var g=cv.getContext('2d'); g.scale(SC,SC); g.fillStyle='#fff'; g.fillRect(0,0,W,3600); g.textBaseline='alphabetic';
+  function font(sz,w,fam){ g.font=(w||'500')+' '+sz+'px '+(fam||F); }
+  function txt(t,x,y,sz,w,col,al,fam){ font(sz,w,fam); g.fillStyle=col||'#1d1410'; g.textAlign=al||'left'; g.fillText(t,x,y); }
+  function fit(t,maxW,sz,w,fam){ font(sz,w,fam); t=String(t); if(g.measureText(t).width<=maxW) return t; while(t.length>1 && g.measureText(t+'…').width>maxW) t=t.slice(0,-1); return t+'…'; }
+  function rr(x,y,w,h,r,fill,stroke,lw){ g.beginPath(); g.moveTo(x+r,y); g.arcTo(x+w,y,x+w,y+h,r); g.arcTo(x+w,y+h,x,y+h,r); g.arcTo(x,y+h,x,y,r); g.arcTo(x,y,x+w,y,r); g.closePath();
+    if(fill){ g.fillStyle=fill; g.fill(); } if(stroke){ g.strokeStyle=stroke; g.lineWidth=lw||2; g.stroke(); } }
+  function line(x1,y1,x2,y2,col,lw,dash){ g.strokeStyle=col; g.lineWidth=lw||1; g.setLineDash(dash||[]); g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.stroke(); g.setLineDash([]); }
+  function wrapC(text, y, sz, col, lh){ font(sz,'500'); var words=String(text).split(' '), ln='', out=[];
+    words.forEach(function(wd){ var t=ln?ln+' '+wd:wd; if(g.measureText(t).width>W-2*P && ln){ out.push(ln); ln=wd; } else ln=t; }); if(ln) out.push(ln);
+    out.forEach(function(l){ txt(l, W/2, y, sz, '500', col, 'center'); y+=lh; }); return y; }
+  function draw(logo){
+    var y=P;
+    // kepala
+    if (logo){ var sc=Math.min(62/logo.width, 62/logo.height); g.drawImage(logo, P, y, logo.width*sc, logo.height*sc); }
+    txt(fit(s.nama_warkop||'Warkop', W-2*P-76, 23, '800', FS), P+74, y+22, 23, '800', '#1d1410', 'left', FS);
+    g.save(); font(13,'800'); g.fillStyle='#b9532c'; g.textAlign='left'; var lt='LAPORAN '+(harian?'HARIAN':'PERIODE'), xx=P+74;
+    for (var i=0;i<lt.length;i++){ g.fillText(lt[i], xx, y+42); xx+=g.measureText(lt[i]).width+1.5; } g.restore();
+    txt(fit(label+' · dibuat '+jam+' oleh '+A.me.nama, W-2*P-76, 13), P+74, y+60, 13, '500', '#6b5a50');
+    y+=74; line(P,y,W-P,y,'#1d1410',3); y+=14;
+    // total
+    if (M.total!==null){
+      var th=M.pisah?92:76; rr(P,y,W-2*P,th,16,'#1d1410');
+      txt('💼 TOTAL UANG KAS '+(harian?'SEKARANG':'AKHIR'), W/2, y+22, 12, '700', 'rgba(255,255,255,.8)', 'center');
+      txt(rp(M.total), W/2, y+58, 34, '800', '#fff', 'center', FS);
+      if (M.pisah) txt('Kas Warkop '+rp(M.w.akhir)+' + Kas Rokok '+rp(M.r.akhir), W/2, y+80, 12.5, '500', 'rgba(255,255,255,.85)', 'center');
+      y+=th+12;
+    }
+    // dua kartu kas
+    var cw=(W-2*P-10)/2;
+    function kartu(x, nm, k, warna, bg){
+      var yy=y, rows=[];
+      if (k.status==='ok') rows.push([harian?'Sisa kemarin':'Saldo awal', rp(k.sebelum), '#1d1410']);
+      rows.push(['Masuk '+(harian?'hari ini':'periode'), '+'+rp(k.masuk), '#2f7d4f'], ['Keluar '+(harian?'hari ini':'periode'), '−'+rp(k.keluar), '#b3261e']);
+      var h=36+rows.length*19+28+(k.status==='ok'?34:24);
+      rr(x,yy,cw,h,14,bg,warna,2);
+      txt(nm, x+12, yy+24, 15, '800');
+      var ry=yy+44; rows.forEach(function(r){ txt(r[0], x+12, ry, 13); txt(r[1], x+cw-12, ry, 13, '800', r[2], 'right'); ry+=19; });
+      line(x+12, ry-8, x+cw-12, ry-8, '#bbaa99', 1, [4,3]);
+      txt('Bersih', x+12, ry+8, 13); txt((k.bersih>=0?'+':'')+rp(k.bersih), x+cw-12, ry+8, 13, '800', '#1d1410', 'right'); ry+=18;
+      if (k.status==='ok'){ line(x+12, ry, x+cw-12, ry, '#1d1410', 2); txt('Saldo', x+12, ry+22, 14.5); txt(rp(k.akhir), x+cw-12, ry+23, 16, '800', '#1d1410', 'right'); }
+      else txt(k.status==='none'?'Saldo awal belum diisi':'Saldo mulai '+fmtTgl(hariBerikut(k.tgl)), x+12, ry+16, 11.5, '500', '#8a786c');
+      return h;
+    }
+    var h1=kartu(P, '☕ Kas Warkop', M.w, '#d9a283', '#fdf4ee'), h2=0;
+    if (M.pisah) h2=kartu(P+cw+10, '🚬 Kas Rokok', M.r, '#9db8d9', '#f1f6fc');
+    else { rr(P+cw+10,y,cw,h1,14,'#f6f3ef','#e0d6cc',2); txt('🚬 Kas Rokok', P+cw+22, y+24, 15, '800', '#8a786c'); txt('Belum dipisah', P+cw+22, y+46, 13, '500', '#8a786c'); }
+    y+=Math.max(h1,h2)+20;
+    // ringkasan bayar & pengeluaran
+    y=wrapC((harian?'Hari ini':'Periode')+': 💵 Cash '+rp(c.met.Cash||0)+' · 📱 QRIS '+rp(c.met.QRIS||0)+' · 🏦 Transfer '+rp(c.met.Transfer||0)+' · '+c.trx+' transaksi', y, 12.5, '#6b5a50', 18);
+    if (R.masuk.length) y=wrapC('Pemasukan lain: '+R.masuk.map(function(x){ return x[0]+' '+rp(x[1]); }).join(' · '), y, 12.5, '#6b5a50', 18);
+    y=wrapC('Pengeluaran: '+(R.keluar.length?R.keluar.map(function(x){ return x[0]+' '+rp(x[1]); }).join(' · '):'tidak ada'), y, 12.5, '#6b5a50', 18);
+    if (c.belum) y=wrapC('⏳ '+c.belum+' pesanan belum dibayar ('+rp(c.belumRp)+') — belum dihitung', y, 12.5, '#b06a00', 18);
+    // stok
+    function judul(t, n){ y+=20; txt(t, P, y, 15, '800'); txt(n+' jenis', W-P, y, 12, '500', '#6b5a50', 'right'); y+=10; }
+    function grid(list, kol){
+      var gap=4, w=(W-2*P-gap*(kol-1))/kol, h=22;
+      list.forEach(function(x,i){ var cx=P+(i%kol)*(w+gap), cy=y+Math.floor(i/kol)*(h+gap);
+        rr(cx,cy,w,h,7,x.low?'#fde3df':'#f6f1ea'); var col=x.low?'#9a1d14':'#1d1410';
+        font(12,'800'); var qw=g.measureText(x.q).width;
+        txt(fit(x.nama, w-qw-20, 12), cx+7, cy+15.5, 12, '500', col); txt(x.q, cx+w-7, cy+15.5, 12, '800', col, 'right'); });
+      y+=Math.ceil(list.length/kol)*(h+gap);
+    }
+    judul('📦 Sisa Stok Warkop', R.stokW.length);
+    if (R.perluBeli.length){
+      font(12.5,'500'); var t='⚠️ Perlu beli: '+R.perluBeli.map(function(x){ return x.nama+' '+x.q; }).join(' · '), words=t.split(' '), ln='', out=[];
+      words.forEach(function(wd){ var tt=ln?ln+' '+wd:wd; if(g.measureText(tt).width>W-2*P-20 && ln){ out.push(ln); ln=wd; } else ln=tt; }); if(ln) out.push(ln);
+      var bh=out.length*17+12; rr(P,y,W-2*P,bh,10,'#fff4d6','#f0d58a',1);
+      out.forEach(function(l,i){ txt(l, P+10, y+20+i*17, 12.5, i===0?'600':'500', '#5a4300'); }); y+=bh+6;
+    }
+    grid(R.stokW, 3);
+    if (R.stokR.length){ judul('🚬 Sisa Stok Rokok', R.stokR.length); grid(R.stokR, 2); }
+    y+=12; line(P,y,W-P,y,'#eeeeee',1); y+=18;
+    txt('Rincian per menu & per transaksi tersimpan di aplikasi kasir', W/2, y, 11.5, '500', '#8a786c', 'center'); y+=14;
+    // potong tinggi
+    var out2=document.createElement('canvas'); out2.width=W*SC; out2.height=Math.ceil(y*SC);
+    out2.getContext('2d').drawImage(cv, 0, 0); return out2;
+  }
+  return qrFontSiap().then(function(){
+    var src=logoSrc(s); return qrLoadImg(/^data:/.test(src) ? src : DEFAULT_LOGO);
+  }).then(draw);
+}
+
 function bukaLaporanGambar(d, label, from, to){
   var sh=openSheet('<h3 class="serif">🖼️ Laporan Gambar</h3><div id="lgw"><div class="loading">Membuat gambar…</div></div>');
   laporanGambar(d, label, from, to).then(function(cv){
@@ -2201,22 +2325,6 @@ function tglSetting(v){
   return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
 }
 function hariBerikut(iso){ var p=iso.split('-'), d=new Date(+p[0], +p[1]-1, +p[2]+1); return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2); }
-/* Lengkapi saldo kas bila server tidak mengirimnya (mis. tanggal tersimpan sebagai tanggal Sheet) */
-function lengkapiSaldo(d, from){
-  if (d.saldo && d.saldo.sebelum!==null && d.saldo.sebelum!==undefined) return Promise.resolve(d);
-  var st=A.data.settings, tgl=tglSetting(st.kas_tgl_awal), raw=String(st.kas_saldo_awal===undefined?'':st.kas_saldo_awal).replace(/[^\d-]/g,'');
-  if (!tgl || raw==='') return Promise.resolve(d);
-  var awal=Number(raw)||0;
-  if (from<=tgl){ d.saldo={awal:awal, tglAwal:tgl, sebelum:null}; return Promise.resolve(d); }
-  var mulai=hariBerikut(tgl), sampai=hariSebelum(from);
-  if (mulai>sampai){ d.saldo={awal:awal, tglAwal:tgl, sebelum:awal}; return Promise.resolve(d); }
-  return api('adminReport', A.pin, mulai, sampai).then(function(x){
-    var net=0;
-    (x.orders||[]).forEach(function(o){ if (o.status!=='Batal' && o.statusBayar==='Lunas') net+=Number(o.nominal)||0; });
-    (x.entries||[]).forEach(function(e){ net += e.jenis==='Pemasukan' ? (Number(e.nominal)||0) : -(Number(e.nominal)||0); });
-    d.saldo={awal:awal, tglAwal:tgl, sebelum:awal+net}; return d;
-  });
-}
 function saldoInfo(d, c){
   var s=d.saldo; if (!s) return null;
   if (s.sebelum===null || s.sebelum===undefined) return {belum:true, tglAwal:s.tglAwal, awal:s.awal};
@@ -2233,19 +2341,20 @@ function saldoCardHtml(d, c){
     '<div class="sr1 tot"><span>💼 SALDO KAS '+(K.mode==='hari'&&r[0]===todayISO()?'SEKARANG':'AKHIR')+'</span><b>'+rp(si.akhir)+'</b></div>' +
     '<button class="linkbtn" id="ksaldo">⚙️ Saldo awal '+rp(si.awal)+' per '+fmtTgl(si.tglAwal)+' — ubah</button></div>';
 }
-function editSaldoAwal(tglSaran){
-  var s=A.data.settings;
-  var sh=openSheet('<h3 class="serif">💼 Saldo Awal Kas</h3>' +
+function editSaldoAwal(tglSaran, jenis){
+  var s=A.data.settings, RK=jenis==='r', kA=RK?'kas_rokok_awal':'kas_saldo_awal', kT=RK?'kas_rokok_tgl':'kas_tgl_awal';
+  var sh=openSheet('<h3 class="serif">'+(RK?'🚬 Saldo Awal Kas Rokok':'☕ Saldo Awal Kas Warkop')+'</h3>' +
+    (RK?'<div class="saldoarti" style="background:#eef4fb;border-color:#c6d7ec">Uang hasil rokok akan <b>dipisah</b> dari Kas Warkop mulai hari <b>setelah</b> tanggal di bawah. Menu kategori <b>Rokok</b> masuk Kas Rokok; menu lain masuk Kas Warkop.</div>':'') +
     '<p class="muted" style="margin:0 0 6px">Jumlah uang kas yang benar-benar ada di <b>akhir</b> tanggal di bawah. Mulai hari berikutnya, saldo dihitung otomatis.</p>' +
-    '<label class="field"><span>SALDO KAS (Rp)</span><input class="input bignum" id="sa1" inputmode="numeric" value="'+fmtNum(s.kas_saldo_awal||'')+'" placeholder="0"></label>' +
-    '<label class="field"><span>PER AKHIR TANGGAL</span><input class="input" type="date" id="sa2" value="'+((typeof tglSaran==='string'&&tglSaran)||tglSetting(s.kas_tgl_awal)||hariSebelum(todayISO()))+'"></label>' +
+    '<label class="field"><span>SALDO KAS (Rp)</span><input class="input bignum" id="sa1" inputmode="numeric" value="'+fmtNum(s[kA]||'')+'" placeholder="0"></label>' +
+    '<label class="field"><span>PER AKHIR TANGGAL</span><input class="input" type="date" id="sa2" value="'+((typeof tglSaran==='string'&&tglSaran)||tglSetting(s[kT])||hariSebelum(todayISO()))+'"></label>' +
     '<div class="saldoarti" id="sa4"></div>' +
-    '<div class="hint" style="text-align:left">Contoh: sisa kas Rp49.000 di akhir 11 Nov → isi Rp49.000, tanggal 11 Nov. Maka laporan 12 Nov menampilkan "Kas sebelumnya Rp49.000" + kas bersih 12 Nov.</div>' +
+    (RK?'<div class="hint" style="text-align:left">Contoh: uang rokok yang ada sekarang Rp100.000, pisah mulai besok → isi Rp100.000, tanggal hari ini. Kalau belum ada uang rokok, isi 0.</div>':'<div class="hint" style="text-align:left">Contoh: sisa kas Rp49.000 di akhir 11 Nov → isi Rp49.000, tanggal 11 Nov. Maka laporan 12 Nov menampilkan "Kas sebelumnya Rp49.000" + kas bersih 12 Nov.</div>') +
     '<button class="btn block" id="sa3" style="margin-top:10px">Simpan Saldo Awal</button>');
   function arti(){
     var n=parseInt($('#sa1',sh).value.replace(/\D/g,''),10)||0, t=$('#sa2',sh).value; if(!t){ $('#sa4',sh).innerHTML=''; return; }
     var p=t.split('-'), d=new Date(+p[0], +p[1]-1, +p[2]+1), bsk=d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);
-    $('#sa4',sh).innerHTML='Artinya: di akhir <b>'+fmtTgl(t)+'</b> uang kas ada <b>'+rp(n)+'</b>.<br>Laporan <b>'+fmtTgl(bsk)+'</b> dan seterusnya akan menambahkan uang ini otomatis.';
+    $('#sa4',sh).innerHTML='Artinya: di akhir <b>'+fmtTgl(t)+'</b> uang '+(RK?'Kas Rokok':'Kas Warkop')+' ada <b>'+rp(n)+'</b>.<br>Laporan <b>'+fmtTgl(bsk)+'</b> dan seterusnya akan menambahkan uang ini otomatis.';
   }
   $('#sa1',sh).addEventListener('input', function(){ this.value=fmtNum(this.value); arti(); });
   $('#sa2',sh).addEventListener('change', arti); arti();
@@ -2254,7 +2363,8 @@ function editSaldoAwal(tglSaran){
     if (isNaN(n)){ toast('Isi saldo (boleh 0)',true); return; }
     if (!t){ toast('Pilih tanggal',true); return; }
     var b=this; b.disabled=true;
-    api('adminSaveSettings', A.pin, {kas_saldo_awal:String(n), kas_tgl_awal:(IS_GAS||USE_API?"'":'')+t}).then(function(ns){ A.data.settings=ns; closeSheet(); toast('Saldo awal disimpan ✓'); kasLoad(); })
+    var obj={}; obj[kA]=String(n); obj[kT]=(IS_GAS||USE_API?"'":'')+t;
+    api('adminSaveSettings', A.pin, obj).then(function(ns){ A.data.settings=ns; closeSheet(); toast('Saldo awal disimpan ✓'); kasLoad(); })
       .catch(function(e){ b.disabled=false; toast(e.message,true); });
   };
 }
@@ -2262,13 +2372,14 @@ function editSaldoAwal(tglSaran){
 function editBelanja(e){
   e = e || {};
   var isNew=!e.id, bahan=A.data.bahan||[];
-  var kategori = e.kategori || 'Belanja Bulanan', metode=e.metode||'Cash';
+  var kategori = e.kategori || 'Belanja Bulanan', metode=e.metode||'Cash', pisahB=!!rokokMulai(), kasB=isRokokEntry(e)?'r':'w';
   var rows = (e.rincian||[]).map(function(x){ return {nama:x.nama, jumlah:x.jumlah, satuan:x.satuan, harga:x.harga, bahan:x.bahan||'', isi:x.isi||1, stok:!!x.bahan}; });
   if (!rows.length) rows=[{nama:'',jumlah:1,satuan:'',harga:'',bahan:'',isi:1,stok:true}];
   var catatan = isNew ? '' : String(e.catatan||'').split(' — ')[0];
   if (!isNew && catatan === String(e.catatan||'')) catatan='';  // catatan lama hanya berisi ringkasan barang
   var sh=openSheet('<h3 class="serif">🛒 '+(isNew?'Catat Belanja':'Ubah Belanja')+'</h3>' +
-    '<div class="field"><span>JENIS BELANJA</span><div class="catchips" id="bjk">'+JENIS_BELANJA.map(function(k){ return '<button type="button" data-v="'+k+'" class="'+(k===kategori?'on':'')+'">'+k.replace('Belanja ','')+'</button>'; }).join('')+'</div></div>' +
+    (pisahB?'<div class="field"><span>BAYAR DARI KAS</span><div class="seg" id="bjkas" style="margin:0"><button type="button" data-v="w" class="'+(kasB==='w'?'on':'')+'">☕ Kas Warkop</button><button type="button" data-v="r" class="'+(kasB==='r'?'on':'')+'">🚬 Kas Rokok</button></div></div>':'') +
+    '<div class="field" id="bjkw"'+(kasB==='r'?' style="display:none"':'')+'><span>JENIS BELANJA</span><div class="catchips" id="bjk">'+JENIS_BELANJA.map(function(k){ return '<button type="button" data-v="'+k+'" class="'+(k===kategori?'on':'')+'">'+k.replace('Belanja ','')+'</button>'; }).join('')+'</div></div>' +
     '<div style="display:flex;gap:8px"><label class="field" style="flex:1;margin:6px 0"><span>TANGGAL</span><input class="input" type="date" id="bjt" value="'+(e.tanggal||todayISO())+'"></label></div>' +
     '<div class="field" style="margin-top:4px"><span>DIBAYAR PAKAI</span><div class="seg" id="bjm" style="margin:0">'+['Cash','QRIS','Transfer'].map(function(m){ return '<button type="button" data-v="'+m+'" class="'+(m===metode?'on':'')+'">'+PAY_ICON[m]+' '+(m==='Cash'?'Kas tunai':m)+'</button>'; }).join('')+'</div></div>' +
     '<div class="field"><span>DAFTAR BARANG</span><div id="bjr"></div><button type="button" class="btn ghost sm" id="bja" style="margin-top:6px">＋ Tambah barang</button></div>' +
@@ -2284,6 +2395,7 @@ function editBelanja(e){
     $('#bjr',sh).innerHTML = rows.map(function(r,i){
       var b = r.bahan ? bahan.filter(function(x){ return x.id===r.bahan; })[0] : matchBahan(r.nama);
       if (b && !r.bahan){ r.bahan=b.id; }
+      if (b && isiBks(b) && !r.isiSet){ if (Number(r.isi)===1) r.isi=isiBks(b); if (!r.satuan) r.satuan='bungkus'; r.isiSet=1; }
       if (!b) r.bahan='';
       var tambah = b && r.stok ? (Number(r.jumlah)||0)*(Number(r.isi)||0) : 0;
       return '<div class="bjrow" data-i="'+i+'">' +
@@ -2307,6 +2419,7 @@ function editBelanja(e){
   draw();
   function seg(sel, cb){ $(sel,sh).onclick=function(ev){ var t=ev.target.closest('[data-v]'); if(!t) return; Array.prototype.forEach.call(this.children,function(x){ x.classList.toggle('on',x===t); }); cb(t.dataset.v); }; }
   seg('#bjk', function(v){ kategori=v; }); seg('#bjm', function(v){ metode=v; });
+  seg('#bjkas', function(v){ kasB=v; $('#bjkw',sh).style.display = v==='r'?'none':''; if (v==='w' && /rokok/i.test(kategori)) kategori='Belanja Bulanan'; });
   $('#bja',sh).onclick=function(){ rows.push({nama:'',jumlah:1,satuan:'',harga:'',bahan:'',isi:1,stok:true}); draw(); var ins=sh.querySelectorAll('[data-f="nama"]'); ins[ins.length-1].focus(); };
   var box=$('#bjr',sh);
   box.addEventListener('input', function(ev){ var row=ev.target.closest('[data-i]'); if(!row) return; var r=rows[+row.dataset.i], f=ev.target.dataset.f;
@@ -2339,7 +2452,7 @@ function editBelanja(e){
     if (bad){ toast((!bad.jumlah?'Jumlah':!bad.harga?'Harga':'Isi per satuan')+' '+bad.nama+' belum diisi',true); return; }
     var tot=items.reduce(function(a,x){ return a+x.harga; },0), btn=this;
     btn.disabled=true; btn.textContent='Menyimpan…';
-    api('adminSaveBelanja', A.pin, {id:e.id||'', tanggal:$('#bjt',sh).value, kategori:kategori, metode:metode, catatan:$('#bjc',sh).value.trim(), items:items})
+    api('adminSaveBelanja', A.pin, {id:e.id||'', tanggal:$('#bjt',sh).value, kategori:(kasB==='r'?'Belanja Rokok':kategori), metode:metode, catatan:$('#bjc',sh).value.trim(), items:items})
       .then(function(){ closeSheet(); toast(kategori+' '+rp(tot)+' tersimpan ✓ — kas & stok diperbarui'); kasLoad(); refreshBahan(); })
       .catch(function(err){ btn.disabled=false; btn.textContent='Simpan Belanja'; toast(err.message,true); });
   };
@@ -2966,7 +3079,7 @@ function kasRender(){
   var d=K.data, c=kasCalc(d.orders, d.entries);
   var html =
     '<div class="kashead">'+esc(kasLabel())+'</div>' +
-    saldoCardHtml(d, c) +
+    duoCardHtml(duoModel(d), K.mode==='hari') +
     '<div class="kasbig"><small>KAS BERSIH '+(K.mode==='hari'?'HARI INI':'PERIODE INI')+'</small><b class="'+(c.bersih<0?'neg':'')+'">'+rp(c.bersih)+'</b><span>Pemasukan − Pengeluaran</span></div>' +
     '<div class="kas2"><div class="kin"><small>PEMASUKAN</small><b>'+rp(c.masuk)+'</b><span>Penjualan '+rp(c.jual)+(c.masukLain?' + lain '+rp(c.masukLain):'')+'</span></div>' +
       '<div class="kout"><small>PENGELUARAN</small><b>'+rp(c.keluar)+'</b><span>'+d.entries.filter(function(e){return e.jenis==='Pengeluaran';}).length+' catatan</span></div></div>' +
@@ -3028,7 +3141,7 @@ function kasRender(){
     }).join('') + (items.length>300?'<div class="hint">Menampilkan 300 terbaru. Data lengkap ada di Google Sheet.</div>':'')
     : '<div class="empty">Belum ada catatan di periode ini.</div>');
   $('#kbody').innerHTML = html;
-  if ($('#ksaldo')) $('#ksaldo').onclick=function(){ editSaldoAwal(); };
+  bindSaldoBtns($('#tab'));
   $('#kbody').onclick=function(e){
     var t;
     if ((t=e.target.closest('[data-l]'))){ K.list=t.dataset.l; kasRender(); return; }
@@ -3039,10 +3152,11 @@ function kasRender(){
 }
 function fmtNum(v){ v=String(v||'').replace(/\D/g,''); return v ? Number(v).toLocaleString('id-ID') : ''; }
 function editEntry(e){
-  var isNew=!e.id, jenis=e.jenis||'Pengeluaran', metode=e.metode||'Cash';
-  var cats = jenis==='Pengeluaran' ? KATEGORI_KELUAR : KATEGORI_MASUK;
+  var isNew=!e.id, jenis=e.jenis||'Pengeluaran', metode=e.metode||'Cash', pisah=!!rokokMulai(), kas=isRokokEntry(e)?'r':'w';
+  var cats = kas==='r' ? (jenis==='Pengeluaran' ? ['Belanja Rokok','Rokok Lainnya'] : ['Modal Rokok','Rokok Lainnya']) : (jenis==='Pengeluaran' ? KATEGORI_KELUAR : KATEGORI_MASUK);
   var sh=openSheet('<h3 class="serif">'+(isNew?(jenis==='Pengeluaran'?'− Catat Pengeluaran':'＋ Catat Pemasukan Lain'):'✏️ Ubah Catatan')+'</h3>' +
     (isNew?'':'<div class="field"><span>JENIS</span><div class="seg" id="ej" style="margin:0"><button type="button" data-v="Pengeluaran" class="'+(jenis==='Pengeluaran'?'on':'')+'">Pengeluaran</button><button type="button" data-v="Pemasukan" class="'+(jenis==='Pemasukan'?'on':'')+'">Pemasukan</button></div></div>') +
+    (pisah?'<div class="field"><span>KAS</span><div class="seg" id="ekas" style="margin:0"><button type="button" data-v="w" class="'+(kas==='w'?'on':'')+'">☕ Kas Warkop</button><button type="button" data-v="r" class="'+(kas==='r'?'on':'')+'">🚬 Kas Rokok</button></div></div>':'') +
     '<label class="field"><span>NOMINAL (Rp) *</span><input class="input bignum" id="en" inputmode="numeric" placeholder="0" value="'+fmtNum(e.nominal)+'"></label>' +
     '<div class="field"><span>UNTUK APA? *</span><div class="catchips" id="ec">'+cats.map(function(c){ return '<button type="button" data-v="'+esc(c)+'" class="'+(c===e.kategori?'on':'')+'">'+esc(c)+'</button>'; }).join('')+'</div>' +
       '<input class="input" id="ek" maxlength="40" placeholder="atau ketik sendiri, cth: Plastik" value="'+esc(cats.indexOf(e.kategori)<0?(e.kategori||''):'')+'" style="margin-top:8px"></div>' +
@@ -3057,9 +3171,13 @@ function editEntry(e){
   $('#ek',sh).addEventListener('input', function(){ if(this.value){ kategori=''; Array.prototype.forEach.call($('#ec',sh).children,function(x){ x.classList.remove('on'); }); } });
   function seg(sel, cb){ if(!$(sel,sh)) return; $(sel,sh).onclick=function(ev){ var b=ev.target.closest('[data-v]'); if(!b) return; Array.prototype.forEach.call(this.children,function(x){ x.classList.toggle('on',x===b); }); cb(b.dataset.v); }; }
   seg('#em', function(v){ metode=v; }); seg('#ej', function(v){ jenis=v; });
+  seg('#ekas', function(v){ var keep={nominal:$('#en',sh).value.replace(/\D/g,''), tanggal:$('#et',sh).value, catatan:$('#eo',sh).value};
+    closeSheet(); setTimeout(function(){ editEntry({id:e.id, jenis:jenis, metode:metode, nominal:keep.nominal, tanggal:keep.tanggal, catatan:keep.catatan, kategori: v==='r' ? (jenis==='Pengeluaran'?'Belanja Rokok':'Modal Rokok') : ''}); }, 250); });
   setTimeout(function(){ if(isNew) $('#en',sh).focus(); }, 80);
   $('#es',sh).onclick=function(){
     var nominal=parseInt($('#en',sh).value.replace(/\D/g,''),10)||0, kat=($('#ek',sh).value.trim()||kategori);
+    if (kas==='r' && kat && !/rokok/i.test(kat)) kat='Rokok - '+kat;
+    if (kas==='w' && /rokok/i.test(kat) && pisah){ toast('Kategori berisi kata "rokok" akan masuk Kas Rokok. Pilih 🚬 Kas Rokok atau ganti namanya.',true); return; }
     if(!nominal){ toast('Isi nominalnya',true); return; }
     if(!kat){ toast('Pilih atau ketik untuk apa',true); return; }
     var b=this; b.disabled=true; b.textContent='Menyimpan…';
