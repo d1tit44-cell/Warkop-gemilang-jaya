@@ -444,6 +444,7 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 .dkpick button{background:var(--card);border:1.5px solid var(--line);border-radius:10px;padding:8px 2px;font:inherit;font-size:12.5px;font-weight:700;color:var(--ink)}
 .dkpick button.gr{grid-column:span 2}
 .dkpick button.on{background:var(--brand);border-color:var(--brand);color:#fff}
+.bq small.bks{display:block;color:var(--muted);font-size:11px;white-space:nowrap}
 .poscats{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:8px}
 .poscats .chip{margin:0;padding:7px 3px;border-radius:10px;font-size:11px;line-height:1.15;white-space:normal;word-break:break-word;min-height:40px;display:flex;align-items:center;justify-content:center;text-align:center}
 .posgrid{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;max-height:46vh;overflow:auto;padding:4px 2px 8px}
@@ -1364,6 +1365,7 @@ function tabMenu(){
   var cats=[]; list.forEach(function(m){ if(cats.indexOf(m.kategori)<0) cats.push(m.kategori); });
   $('#tab').innerHTML =
     (isOwner() ? '<div class="addrow"><button class="btn bigadd" id="mquick">⚡ Tambah Cepat<small>banyak menu sekaligus</small></button><button class="btn ghost bigadd" id="madd">＋ Satu Menu<small>dengan foto & detail</small></button></div>' +
+      '<button class="btn ghost block" id="mrokok" style="margin-bottom:10px">🚬 Tambah Rokok <small style="font-weight:500">(jual batang & bungkus)</small></button>' +
       '<button class="btn block fotobtn" id="mfoto">📷 Foto & ⭐ Best Seller <small>pasang foto menu dengan cepat</small></button>' + linkBtnHtml('mlink') : '') +
     '<label class="search" style="margin-bottom:10px"><span>🔎</span><input id="mq" type="search" placeholder="Cari menu…" value="'+esc(A.mq)+'"></label>' +
     (isOwner() ? '<div class="howto"><b>Cara pakai:</b><ol><li><b>＋ Tambah Menu Baru</b> → isi nama, harga, pilih kategori (atau buat kategori baru) → Simpan</li><li>Stok dihitung dari <b>bahan</b> (tab <b>Stok</b>). Hubungkan menu ke bahannya lewat ✏️ → <b>Bahan yang dipakai</b></li><li>✏️ = ubah nama, harga, foto, atau hapus menu</li><li>Tombol hijau = tandai tersedia / habis secara manual</li></ol></div>' : '<div class="howto">Tombol hijau = tandai tersedia / habis. Stok bahan diatur di tab <b>Stok</b>. Menambah/mengubah menu hanya bisa oleh Owner.</div>') +
@@ -1379,6 +1381,7 @@ function tabMenu(){
     (A.data.menu.length && isOwner() ? '<button class="btn danger block" style="margin-top:24px" id="mclear">🗑️ Kosongkan Semua Menu (mulai dari nol)</button>' : '');
   $('#mq').addEventListener('input', function(e){ A.mq=e.target.value; var p=e.target.selectionStart; tabMenu(); var i=$('#mq'); if(!i) return; i.focus(); i.setSelectionRange(p,p); });
   if ($('#madd')) $('#madd').onclick=function(){ editItem(null); };
+  if ($('#mrokok')) $('#mrokok').onclick=tambahRokok;
   if ($('#mquick')) $('#mquick').onclick=quickAddMenu;
   if ($('#mfoto')) $('#mfoto').onclick=fotoManager;
   if ($('#mlink')) $('#mlink').onclick=cocokkanStokMenu;
@@ -1714,12 +1717,76 @@ function promoText(rules){
 var S = { q:'' };
 function bahanById(id){ return (A.data.bahan||[]).filter(function(b){ return b.id===id; })[0]; }
 function fmtQty(n){ n=Number(n)||0; return (Math.round(n*100)/100).toLocaleString('id-ID'); }
+/* ---------- Barang satuan + bungkusan (rokok) ----------
+   Stok disimpan dalam BATANG. Isi per bungkus disimpan di kolom satuan, mis. "btg isi16". */
+function isiBks(b){ var m=/isi\s*(\d+)/i.exec(b && b.satuan || ''); return m ? Number(m[1]) : 0; }
+function satuanTampil(b){ return isiBks(b) ? 'batang' : b.satuan; }
+function pecahBks(b, n){ var isi=isiBks(b); if(!isi) return ''; n=Math.max(0, Math.floor(Number(n)||0)); var k=Math.floor(n/isi), sisa=n%isi;
+  return (k?k+' bks':'')+(k&&sisa?' + ':'')+(sisa?sisa+' btg':'')+(!k&&!sisa?'0':''); }
+function tambahRokok(){
+  var sh=openSheet('<h3 class="serif">🚬 Tambah Rokok</h3>' +
+    '<p class="muted" style="margin:0 0 6px;font-size:13px">Satu kali isi, langsung jadi stok + menu <b>satuan (batang)</b> dan <b>bungkusan</b>. Stok dihitung per batang: jual 1 bungkus = stok berkurang sesuai isinya.</p>' +
+    '<label class="field"><span>NAMA ROKOK *</span><input class="input" id="rkn" maxlength="50" placeholder="cth: Sampoerna Mild"></label>' +
+    '<div id="rkdup"></div>' +
+    '<div class="field"><span>ISI PER BUNGKUS (batang)</span><div class="catchips" id="rki">'+[12,16,20].map(function(v){ return '<button type="button" data-v="'+v+'" class="'+(v===16?'on':'')+'">'+v+' batang</button>'; }).join('')+
+      '<input class="input" id="rkic" inputmode="numeric" placeholder="lain" style="width:80px;padding:8px 10px"></div></div>' +
+    '<label class="chk2"><input type="checkbox" id="rks1" checked> Jual <b>satuan / per batang</b></label>' +
+    '<label class="field" id="rkh1w"><span>HARGA PER BATANG</span><input class="input" id="rkh1" inputmode="numeric" placeholder="cth: 2.000"></label>' +
+    '<label class="chk2"><input type="checkbox" id="rks2" checked> Jual <b>per bungkus</b></label>' +
+    '<label class="field" id="rkh2w"><span>HARGA PER BUNGKUS</span><input class="input" id="rkh2" inputmode="numeric" placeholder="cth: 32.000"></label>' +
+    '<div class="field"><span>STOK SEKARANG</span><div style="display:flex;gap:8px"><label style="flex:1"><input class="input" id="rkb" inputmode="numeric" placeholder="0"><small class="muted">bungkus utuh</small></label><label style="flex:1"><input class="input" id="rkt" inputmode="numeric" placeholder="0"><small class="muted">batang lepasan</small></label></div></div>' +
+    '<label class="field"><span>PERINGATAN JIKA STOK TINGGAL (batang)</span><input class="input" id="rkm" inputmode="numeric" value="10"></label>' +
+    '<div class="kembali" id="rkr" style="text-align:left"></div>' +
+    '<button class="btn block" id="rksave" style="margin-top:10px">Simpan Rokok</button>');
+  var isi=16;
+  function num(id){ return parseInt(($(id,sh).value||'').replace(/\D/g,''),10)||0; }
+  function prev(){
+    var nama=$('#rkn',sh).value.trim(), tot=num('#rkb')*isi+num('#rkt');
+    $('#rkh1w',sh).style.display=$('#rks1',sh).checked?'':'none'; $('#rkh2w',sh).style.display=$('#rks2',sh).checked?'':'none';
+    var h=[]; if(nama){
+      if($('#rks1',sh).checked) h.push('📋 Menu <b>'+esc(nama)+' (Batang)</b> '+rp(num('#rkh1'))+' → stok −1 batang');
+      if($('#rks2',sh).checked) h.push('📋 Menu <b>'+esc(nama)+' (Bungkus)</b> '+rp(num('#rkh2'))+' → stok −'+isi+' batang');
+      h.push('📦 Stok awal: <b>'+tot+' batang</b>'+(tot>=isi?' ('+pecahBks({satuan:'isi'+isi}, tot)+')':''));
+    }
+    $('#rkr',sh).innerHTML=h.join('<br>');
+    var dup=nama ? (A.data.bahan||[]).filter(function(b){ return mirip(b.nama,nama)>=0.9; })[0] : null;
+    $('#rkdup',sh).innerHTML = dup ? '<div class="hint" style="text-align:left;color:var(--bad)">⚠️ Stok <b>'+esc(dup.nama)+'</b> sudah ada. Pakai nama lain, atau tambah stoknya lewat tombol ＋ Masuk.</div>' : '';
+  }
+  sh.addEventListener('input', function(e){ if(['rkh1','rkh2','rkb','rkt','rkm'].indexOf(e.target.id)>=0) e.target.value=fmtNum(e.target.value);
+    if (e.target.id==='rkic'){ var v=parseInt(e.target.value,10); if(v>0){ isi=v; [].forEach.call($('#rki',sh).querySelectorAll('[data-v]'),function(x){ x.classList.remove('on'); }); } }
+    prev(); });
+  sh.addEventListener('change', prev);
+  $('#rki',sh).onclick=function(e){ var t=e.target.closest('[data-v]'); if(!t) return; isi=Number(t.dataset.v); $('#rkic',sh).value='';
+    [].forEach.call(this.querySelectorAll('[data-v]'),function(x){ x.classList.toggle('on',x===t); }); prev(); };
+  $('#rksave',sh).onclick=function(){
+    var nama=$('#rkn',sh).value.trim(), j1=$('#rks1',sh).checked, j2=$('#rks2',sh).checked, h1=num('#rkh1'), h2=num('#rkh2');
+    if(!nama){ toast('Isi nama rokok',true); return; }
+    if(!j1 && !j2){ toast('Pilih minimal satu: satuan atau bungkus',true); return; }
+    if((j1&&!h1)||(j2&&!h2)){ toast('Isi harganya',true); return; }
+    if(!isi || isi>100){ toast('Isi per bungkus tidak benar',true); return; }
+    var btn=this; btn.disabled=true; btn.textContent='Menyimpan…';
+    var tot=num('#rkb')*isi+num('#rkt');
+    api('adminSaveBahan', A.pin, {id:'', nama:nama, satuan:'btg isi'+isi, minimal:num('#rkm'), stokAwal:tot}).then(function(list){
+      A.data.bahan=list; var b=list.filter(function(x){ return x.nama.toLowerCase()===nama.toLowerCase(); })[0];
+      if(!b) throw new Error('Stok tersimpan, tapi gagal dibaca. Muat ulang aplikasi.');
+      var menus=[]; if(j1) menus.push({nama:nama+' (Batang)', harga:h1, q:1}); if(j2) menus.push({nama:nama+' (Bungkus)', harga:h2, q:isi});
+      return menus.reduce(function(pr, m){ return pr.then(function(){
+        return api('adminSaveItem', A.pin, {id:'', nama:m.nama, kategori:'Rokok', harga:m.harga, deskripsi:'', foto:'', tersedia:true, bestSeller:false, urutan:A.data.menu.length+1, stok:'', resep:[{b:b.id,q:m.q,alt:[]}]})
+          .then(function(menu){ A.data.menu=menu; }); }); }, Promise.resolve());
+    }).then(function(){
+      closeSheet(); if (A.tab==='stok') tabStok(); else if (A.tab==='menu') tabMenu(); toast('Rokok '+nama+' disimpan ✓');
+      api('adminGetData', A.pin).then(function(d){ A.data.menu=d.menu; A.data.bahan=d.bahan||[]; }).catch(function(){});
+    }).catch(function(e){ btn.disabled=false; btn.textContent='Simpan Rokok'; toast(e.message,true); });
+  };
+  setTimeout(function(){ $('#rkn',sh).focus(); }, 80);
+}
 function tabStok(){
   var list=(A.data.bahan||[]).filter(function(b){ return !S.q || b.nama.toLowerCase().indexOf(S.q.toLowerCase())>=0; });
   var tipis=(A.data.bahan||[]).filter(function(b){ return b.stok<=b.minimal; }).length;
   $('#tab').innerHTML =
     '<div class="stats"><div class="stat"><small>JENIS BAHAN</small><b>'+(A.data.bahan||[]).length+'</b></div><div class="stat"><small>MENIPIS / HABIS</small><b style="color:'+(tipis?'var(--bad)':'var(--ok)')+'">'+tipis+'</b></div>'+(isOwner()?'<div class="stat"><small>LAPORAN</small><button class="btn sm" id="slap" style="margin-top:4px;padding:6px 10px">📄 Buka</button></div>':'<div class="stat"><small>STOK</small><b style="font-size:14px">Bahan</b></div>')+'</div>' +
     (isOwner() ? '<div class="addrow"><button class="btn bigadd" id="squick">⚡ Tambah Cepat<small>banyak stok sekaligus</small></button><button class="btn ghost bigadd" id="sadd">＋ Satu Stok</button></div>' +
+      '<button class="btn ghost block" id="srokok" style="margin-bottom:10px">🚬 Tambah Rokok <small style="font-weight:500">(jual batang & bungkus)</small></button>' +
       linkBtnHtml('slink') : '') +
     '<label class="search" style="margin-bottom:10px"><span>🔎</span><input id="sq" type="search" placeholder="Cari bahan…" value="'+esc(S.q)+'"></label>' +
     '<div class="howto">Stok bahan berkurang <b>otomatis</b> saat ada pesanan (sesuai resep di tiap menu), dan kembali jika pesanan dibatalkan.<br>' +
@@ -1727,7 +1794,7 @@ function tabStok(){
     (list.length ? list.map(function(b){
       var low=b.stok<=b.minimal, zero=b.stok<=0;
       return '<div class="brow'+(zero?' zero':low?' low':'')+'"><div class="info"><b>'+esc(b.nama)+'</b><small>'+(zero?'⛔ HABIS':low?'⚠️ Menipis (min '+fmtQty(b.minimal)+')':'Min '+fmtQty(b.minimal))+'</small></div>' +
-        '<div class="bq"><b>'+fmtQty(b.stok)+'</b><small>'+esc(b.satuan)+'</small></div>' +
+        '<div class="bq"><b>'+fmtQty(b.stok)+'</b><small>'+esc(satuanTampil(b))+'</small>'+(isiBks(b)&&b.stok>=isiBks(b)?'<small class="bks">'+pecahBks(b,b.stok)+'</small>':'')+'</div>' +
         '<div class="bbtn"><button class="btn sm" style="background:var(--ok)" data-in="'+b.id+'">＋ Masuk</button>' +
         '<button class="btn sm ghost" data-hist="'+b.id+'">Riwayat</button>' +
         (isOwner()?'<button class="btn sm ghost" data-kor="'+b.id+'">Koreksi</button><button class="btn sm ghost" data-eb="'+b.id+'">✏️</button>':'')+'</div></div>';
@@ -1735,6 +1802,7 @@ function tabStok(){
   $('#sq').addEventListener('input', function(e){ S.q=e.target.value; var p=e.target.selectionStart; tabStok(); var i=$('#sq'); i.focus(); try{ i.setSelectionRange(p,p);}catch(x){} });
   if ($('#sadd')) $('#sadd').onclick=function(){ editBahan(null); };
   if ($('#squick')) $('#squick').onclick=quickAddBahan;
+  if ($('#srokok')) $('#srokok').onclick=tambahRokok;
   if ($('#slink')) $('#slink').onclick=cocokkanStokMenu;
   if ($('#slap')) $('#slap').onclick=function(){ openLaporanHariIni(); };
   $('#tab').onclick=function(e){ var t;
@@ -1757,8 +1825,10 @@ function editBahan(id){
     (id?'<button class="btn danger block" style="margin-top:10px" id="bdel">🗑️ Hapus Bahan</button>':'') +
     (!id?'<div class="hint" style="text-align:left">Setelah bahan dibuat, hubungkan ke menu: tab <b>Menu</b> → ✏️ menu → bagian <b>Bahan yang dipakai</b>.</div>':''));
   var sat=b.satuan;
-  $('#bsat',sh).onclick=function(e){ var t=e.target.closest('[data-v]'); if(!t) return; sat=t.dataset.v; Array.prototype.forEach.call(this.children,function(x){ x.classList.toggle('on',x===t); }); };
+  if (isiBks(b)){ $('#bsat',sh).parentNode.innerHTML='<span>ISI PER BUNGKUS (batang)</span><input class="input" id="bisi" inputmode="numeric" value="'+isiBks(b)+'"><small class="muted">Stok dihitung per batang.</small>'; }
+  if ($('#bsat',sh)) $('#bsat',sh).onclick=function(e){ var t=e.target.closest('[data-v]'); if(!t) return; sat=t.dataset.v; Array.prototype.forEach.call(this.children,function(x){ x.classList.toggle('on',x===t); }); };
   $('#bsave',sh).onclick=function(){
+    if ($('#bisi',sh)){ var iv=parseInt($('#bisi',sh).value,10); if(!(iv>0&&iv<=100)){ toast('Isi per bungkus tidak benar',true); return; } sat='btg isi'+iv; }
     var d={id:id||'', nama:$('#bn',sh).value.trim(), satuan:sat, minimal:parseInt($('#bm',sh).value,10)||0};
     if (!id) d.stokAwal=parseInt(($('#bs',sh).value||'').replace(/\D/g,''),10)||0;
     if (!d.nama){ toast('Isi nama bahan',true); return; }
@@ -1773,7 +1843,8 @@ function editBahan(id){
 }
 function stokForm(id, jenis){
   var b=bahanById(id); if(!b) return;
-  var masuk = jenis==='Masuk';
+  var masuk = jenis==='Masuk', isi=isiBks(b);
+  if (isi) return stokFormRokok(b, jenis);
   var sh=openSheet('<h3 class="serif">'+(masuk?'＋ Stok Masuk':'🔢 Koreksi Stok')+'</h3><p class="muted" style="margin:0"><b>'+esc(b.nama)+'</b> · sekarang <b>'+fmtQty(b.stok)+' '+esc(b.satuan)+'</b></p>' +
     '<label class="field"><span>'+(masuk?'JUMLAH YANG MASUK':'JUMLAH ASLI SETELAH DIHITUNG')+' ('+esc(b.satuan)+')</span><input class="input bignum" id="sj" inputmode="numeric" placeholder="0"></label>' +
     (masuk?'<div class="quick" id="sjq">'+[1,5,10,20,24,40].map(function(v){ return '<button type="button" data-v="'+v+'">+'+v+'</button>'; }).join('')+'</div>':'') +
@@ -1790,6 +1861,32 @@ function stokForm(id, jenis){
     var n=parseInt(inp.value.replace(/\D/g,''),10); if(isNaN(n)){ toast('Isi jumlahnya',true); return; }
     var btn=this; btn.disabled=true;
     api('adminStokBahan', A.pin, id, jenis, n, $('#sc',sh).value.trim()).then(function(list){ A.data.bahan=list; closeSheet(); tabStok(); toast('Stok '+b.nama+' disimpan ✓'); })
+      .catch(function(e){ btn.disabled=false; toast(e.message,true); });
+  };
+}
+function stokFormRokok(b, jenis){
+  var masuk=jenis==='Masuk', isi=isiBks(b);
+  var sh=openSheet('<h3 class="serif">'+(masuk?'＋ Stok Masuk':'🔢 Koreksi Stok')+'</h3><p class="muted" style="margin:0"><b>'+esc(b.nama)+'</b> · 1 bungkus = '+isi+' batang<br>Sekarang <b>'+fmtQty(b.stok)+' batang</b>'+(b.stok>=isi?' ('+pecahBks(b,b.stok)+')':'')+'</p>' +
+    '<div class="field"><span>'+(masuk?'JUMLAH YANG MASUK':'JUMLAH ASLI SETELAH DIHITUNG')+'</span><div style="display:flex;gap:8px">' +
+      '<label style="flex:1"><input class="input bignum" id="sjb" inputmode="numeric" placeholder="0"><small class="muted">bungkus</small></label>' +
+      '<label style="flex:1"><input class="input bignum" id="sjt" inputmode="numeric" placeholder="0"><small class="muted">batang lepasan</small></label></div></div>' +
+    (masuk?'<div class="quick" id="sjq">'+[1,2,5,10].map(function(v){ return '<button type="button" data-v="'+v+'">+'+v+' bks</button>'; }).join('')+'</div>':'') +
+    '<div class="kembali" id="sjr"></div>' +
+    '<label class="field"><span>CATATAN (opsional)</span><input class="input" id="sc" maxlength="120" placeholder="'+(masuk?'cth: beli 1 slop':'cth: hitung ulang')+'"></label>' +
+    '<button class="btn block" id="ss" style="background:'+(masuk?'var(--ok)':'var(--brand)')+'">Simpan</button>');
+  function n(id){ var v=($(id,sh).value||'').replace(/\D/g,''); return v===''?null:parseInt(v,10); }
+  function total(){ var a=n('#sjb'), c=n('#sjt'); if(a===null&&c===null) return null; return (a||0)*isi+(c||0); }
+  function prev(){ var t=total(); if(t===null){ $('#sjr',sh).innerHTML=''; return; }
+    $('#sjr',sh).innerHTML = (masuk ? 'Masuk <b>'+t+' batang</b> → stok jadi <b>'+fmtQty(b.stok+t)+' batang</b>' : 'Jumlah asli <b>'+t+' batang</b> · selisih <b>'+(t-b.stok>=0?'+':'')+fmtQty(t-b.stok)+'</b>'); }
+  sh.addEventListener('input', prev);
+  if ($('#sjq',sh)) $('#sjq',sh).onclick=function(e){ var t=e.target.closest('[data-v]'); if(!t) return; $('#sjb',sh).value=(n('#sjb')||0)+Number(t.dataset.v); prev(); };
+  setTimeout(function(){ $('#sjb',sh).focus(); }, 80);
+  $('#ss',sh).onclick=function(){
+    var t=total(); if(t===null){ toast('Isi jumlahnya',true); return; }
+    var ket=(n('#sjb')?n('#sjb')+' bks':'')+(n('#sjb')&&n('#sjt')?' + ':'')+(n('#sjt')?n('#sjt')+' btg':'');
+    var cat=$('#sc',sh).value.trim(); cat = ket ? ket+(cat?' · '+cat:'') : cat;
+    var btn=this; btn.disabled=true;
+    api('adminStokBahan', A.pin, b.id, jenis, t, cat).then(function(list){ A.data.bahan=list; closeSheet(); tabStok(); toast('Stok '+b.nama+' disimpan ✓'); })
       .catch(function(e){ btn.disabled=false; toast(e.message,true); });
   };
 }
