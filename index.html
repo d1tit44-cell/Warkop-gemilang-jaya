@@ -375,6 +375,7 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 .saldobox .sr1.tot b{font-family:Fraunces,serif;font-size:24px}
 .saldobox b.pos{color:var(--ok)}.dtot{background:#1d1410;color:#fff;border-radius:16px;padding:12px 14px;margin:10px 0;text-align:center}
 .dtot small{display:block;opacity:.8;font-size:11.5px;letter-spacing:1px;font-weight:700}.dtot b{display:block;font-size:30px;font-family:Fraunces,Georgia,serif;line-height:1.2}.dtot i{display:block;font-style:normal;font-size:12px;opacity:.85}
+.kasview{margin:4px 0 10px}.kasview button{flex:1}
 .dtwo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .dk{border:2px solid #e8dccd;border-radius:14px;padding:9px 10px;font-size:12.5px;color:#1d1410;background:#fff;display:flex;flex-direction:column}
 .dk h4{margin:0 0 5px;font-size:14px}.dk.w1{border-color:#d9a283;background:#fdf4ee}.dk.r1{border-color:#9db8d9;background:#f1f6fc}
@@ -3075,12 +3076,34 @@ function kasCalc(orders, entries){
   c.masuk=c.jual+c.masukLain; c.bersih=c.masuk-c.keluar;
   return c;
 }
+/* tampilan Kas: Warkop saja / Rokok saja / Semua */
+function kasView(d0){
+  var mode = rokokMulai() ? (K.kas||'w') : 'all';
+  if (mode==='all') return d0;
+  var orders=[];
+  (d0.orders||[]).forEach(function(o){
+    var pisah=pisahHari(o.tgl);
+    if (!pisah){ if (mode==='w') orders.push(o); return; }
+    var items=(o.items||[]).filter(function(i){ return isRokokItem(i) === (mode==='r'); });
+    if (!items.length) return;
+    var r=bagianRokok(o), n=Number(o.nominal)||0, x={};
+    for (var k in o) x[k]=o[k];
+    x.items=items; x.nominal = mode==='r' ? r : n-r;
+    var sub=items.reduce(function(a,i){ return a+(Number(i.qty)||0)*(Number(i.harga)||0); },0);
+    if (x.total!==undefined) x.total = (o.statusBayar==='Lunas') ? x.nominal : sub;
+    orders.push(x);
+  });
+  var entries=(d0.entries||[]).filter(function(e){ var rk=pisahHari(e.tanggal) && isRokokEntry(e); return mode==='r' ? rk : !rk; });
+  var d={}; for (var k2 in d0) d[k2]=d0[k2]; d.orders=orders; d.entries=entries; return d;
+}
 function kasRender(){
-  var d=K.data, c=kasCalc(d.orders, d.entries);
+  var D0=K.data, d=kasView(D0), c=kasCalc(d.orders, d.entries), kmode = rokokMulai() ? (K.kas||'w') : 'all';
+  var kname = kmode==='w' ? ' · WARKOP' : kmode==='r' ? ' · ROKOK' : '';
   var html =
     '<div class="kashead">'+esc(kasLabel())+'</div>' +
-    duoCardHtml(duoModel(d), K.mode==='hari') +
-    '<div class="kasbig"><small>KAS BERSIH '+(K.mode==='hari'?'HARI INI':'PERIODE INI')+'</small><b class="'+(c.bersih<0?'neg':'')+'">'+rp(c.bersih)+'</b><span>Pemasukan − Pengeluaran</span></div>' +
+    duoCardHtml(duoModel(D0), K.mode==='hari') +
+    (rokokMulai() ? '<div class="seg kasview" id="kview">'+[['w','☕ Warkop'],['r','🚬 Rokok'],['all','Semua']].map(function(x){ return '<button type="button" data-kv="'+x[0]+'" class="'+(kmode===x[0]?'on':'')+'">'+x[1]+'</button>'; }).join('')+'</div>' : '') +
+    '<div class="kasbig"><small>KAS BERSIH '+(K.mode==='hari'?'HARI INI':'PERIODE INI')+kname+'</small><b class="'+(c.bersih<0?'neg':'')+'">'+rp(c.bersih)+'</b><span>Pemasukan − Pengeluaran</span></div>' +
     '<div class="kas2"><div class="kin"><small>PEMASUKAN</small><b>'+rp(c.masuk)+'</b><span>Penjualan '+rp(c.jual)+(c.masukLain?' + lain '+rp(c.masukLain):'')+'</span></div>' +
       '<div class="kout"><small>PENGELUARAN</small><b>'+rp(c.keluar)+'</b><span>'+d.entries.filter(function(e){return e.jenis==='Pengeluaran';}).length+' catatan</span></div></div>' +
     '<div class="kasmet">'+['Cash','QRIS','Transfer'].map(function(m){
@@ -3142,6 +3165,7 @@ function kasRender(){
     : '<div class="empty">Belum ada catatan di periode ini.</div>');
   $('#kbody').innerHTML = html;
   bindSaldoBtns($('#tab'));
+  Array.prototype.forEach.call(document.querySelectorAll('#kview [data-kv]'), function(b){ b.onclick=function(){ K.kas=b.dataset.kv; kasRender(); }; });
   $('#kbody').onclick=function(e){
     var t;
     if ((t=e.target.closest('[data-l]'))){ K.list=t.dataset.l; kasRender(); return; }
