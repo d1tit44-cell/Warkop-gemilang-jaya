@@ -376,6 +376,9 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 .saldobox b.pos{color:var(--ok)}.dtot{background:#1d1410;color:#fff;border-radius:16px;padding:12px 14px;margin:10px 0;text-align:center}
 .dtot small{display:block;opacity:.8;font-size:11.5px;letter-spacing:1px;font-weight:700}.dtot b{display:block;font-size:30px;font-family:Fraunces,Georgia,serif;line-height:1.2}.dtot i{display:block;font-style:normal;font-size:12px;opacity:.85}
 .kasview{margin:4px 0 10px}.kasview button{flex:1}
+.dtot2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
+.dtot2>div{border-radius:16px;padding:10px 8px;text-align:center;color:#fff}.dtot2 .w{background:#7a3a1c}.dtot2 .r{background:#1f4f86}
+.dtot2 small{display:block;font-size:10.5px;letter-spacing:.5px;font-weight:700;opacity:.9}.dtot2 b{display:block;font-size:22px;font-family:Fraunces,Georgia,serif;line-height:1.25}
 .dtwo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .dk{border:2px solid #e8dccd;border-radius:14px;padding:9px 10px;font-size:12.5px;color:#1d1410;background:#fff;display:flex;flex-direction:column}
 .dk h4{margin:0 0 5px;font-size:14px}.dk.w1{border-color:#d9a283;background:#fdf4ee}.dk.r1{border-color:#9db8d9;background:#f1f6fc}
@@ -2126,8 +2129,11 @@ function duoCardHtml(M, harian, idPrefix){
         '<div class="dnote">'+(x.status==='none'?'Saldo awal belum diisi':'Saldo awal berlaku mulai '+fmtTgl(hariBerikut(x.tgl)))+'</div>');
     return head+rows+'<button class="linkbtn" data-sa="'+j+'">⚙️ '+(x.status==='none'?'Isi saldo awal':'Saldo awal '+rp(x.awal)+' per '+fmtTgl(x.tgl).replace(/ \d{4}$/,''))+'</button></div>';
   }
-  return (M.total!==null ? '<div class="dtot"><small>💼 TOTAL UANG KAS '+(harian?'SEKARANG':'AKHIR')+'</small><b>'+rp(M.total)+'</b>' +
-      (M.pisah?'<i>Kas Warkop '+rp(M.w.akhir)+' + Kas Rokok '+rp(M.r.akhir)+'</i>':'')+'</div>' : '') +
+  var tb = M.pisah
+    ? ((M.w.status==='ok' || M.r.status==='ok') ? '<div class="dtot2"><div class="w"><small>☕ KAS WARKOP '+(harian?'SEKARANG':'AKHIR')+'</small><b>'+(M.w.status==='ok'?rp(M.w.akhir):'—')+'</b></div>' +
+        '<div class="r"><small>🚬 KAS ROKOK '+(harian?'SEKARANG':'AKHIR')+'</small><b>'+(M.r.status==='ok'?rp(M.r.akhir):'—')+'</b></div></div>' : '')
+    : (M.total!==null ? '<div class="dtot"><small>💼 UANG KAS '+(harian?'SEKARANG':'AKHIR')+'</small><b>'+rp(M.total)+'</b></div>' : '');
+  return tb +
     '<div class="dtwo">'+card('w', M.w)+card('r', M.r)+'</div>';
 }
 function bindSaldoBtns(root, after){
@@ -2146,16 +2152,25 @@ function lapRingkas(d){
     else stokW.push({nama:x.nama, q:fmtQty(x.akhir), low:low, n:x.akhir});
   });
   var urut=function(a,b){ return (b.low-a.low) || a.nama.localeCompare(b.nama); };
+  var baris=[];
+  function bayar(c2){ return '💵 Cash '+rp(c2.met.Cash||0)+' · 📱 QRIS '+rp(c2.met.QRIS||0)+' · 🏦 Transfer '+rp(c2.met.Transfer||0)+' · '+c2.trx+' transaksi'; }
+  function keluarDari(dd){ var Lx=lapData(dd), a=[]; Lx.belanja.forEach(function(b){ a.push(b.kategori+' '+rp(b.nominal)); }); Lx.keluar.forEach(function(x){ a.push(x.kat+(x.n>1?' '+x.n+'×':'')+' '+rp(x.rp)); }); return a.length?a.join(' · '):'tidak ada'; }
+  if (M.pisah){
+    var dw=kasView(d,'w'), dr=kasView(d,'r'), cw=kasCalc(dw.orders,dw.entries), cr=kasCalc(dr.orders,dr.entries);
+    baris.push('☕ Warkop: '+bayar(cw), '☕ Pengeluaran warkop: '+keluarDari(dw), '🚬 Rokok: '+bayar(cr), '🚬 Pengeluaran rokok: '+keluarDari(dr));
+  } else {
+    baris.push(bayar(c), 'Pengeluaran: '+(keluar.length?keluar.map(function(x){ return x[0]+' '+rp(x[1]); }).join(' · '):'tidak ada'));
+  }
   stokW.sort(urut); stokR.sort(urut);
-  return {L:L, M:M, c:c, keluar:keluar, masuk:masuk, stokW:stokW, stokR:stokR,
+  return {L:L, M:M, c:c, keluar:keluar, baris:baris, masuk:masuk, stokW:stokW, stokR:stokR,
     perluBeli: stokW.concat(stokR).filter(function(x){ return x.low; }).sort(function(a,b){ return a.n-b.n; })};
 }
 function ringkasHtml(R, harian){
   var c=R.c;
   return duoCardHtml(R.M, harian, 'l') +
-    '<div class="dmet">'+(harian?'Hari ini':'Periode')+': 💵 Cash '+rp(c.met.Cash||0)+' · 📱 QRIS '+rp(c.met.QRIS||0)+' · 🏦 Transfer '+rp(c.met.Transfer||0)+' · '+c.trx+' transaksi</div>' +
+    R.baris.map(function(t){ return '<div class="dmet">'+esc(t)+'</div>'; }).join('') +
     (R.masuk.length?'<div class="dmet">Pemasukan lain: '+R.masuk.map(function(x){ return esc(x[0])+' '+rp(x[1]); }).join(' · ')+'</div>':'') +
-    '<div class="dmet">Pengeluaran: '+(R.keluar.length?R.keluar.map(function(x){ return esc(x[0])+' '+rp(x[1]); }).join(' · '):'tidak ada')+'</div>' +
+
     (c.belum?'<div class="dmet warn">⏳ '+c.belum+' pesanan belum dibayar ('+rp(c.belumRp)+') — belum dihitung</div>':'') +
     '<h4 class="dh">📦 Sisa Stok Warkop <small>'+R.stokW.length+' jenis</small></h4>' +
     (R.perluBeli.length?'<div class="dwarn">⚠️ <b>Perlu beli:</b> '+R.perluBeli.map(function(x){ return esc(x.nama)+' '+esc(x.q); }).join(' · ')+'</div>':'') +
@@ -2165,12 +2180,11 @@ function ringkasHtml(R, harian){
 }
 function ringkasTeks(R, label, harian, jam){
   var s=A.data.settings, c=R.c, M=R.M, t=['*LAPORAN '+(harian?'HARIAN':'PERIODE')+' '+(s.nama_warkop||'').toUpperCase()+'*', label+' · dibuat '+jam+' oleh '+A.me.nama, ''];
-  if (M.total!==null) t.push('💼 *TOTAL UANG KAS: '+rp(M.total)+'*', '');
+  if (!M.pisah && M.total!==null) t.push('💼 *UANG KAS: '+rp(M.total)+'*', '');
   function kas(nm, x){ t.push('*'+nm+'*'); if (x.status==='ok') t.push((harian?'Sisa kemarin: ':'Saldo awal: ')+rp(x.sebelum));
     t.push('Masuk: +'+rp(x.masuk), 'Keluar: -'+rp(x.keluar)); if (x.status==='ok') t.push('*Saldo: '+rp(x.akhir)+'*'); t.push(''); }
   kas('☕ KAS WARKOP', M.w); if (M.pisah) kas('🚬 KAS ROKOK', M.r);
-  t.push('Cash '+rp(c.met.Cash||0)+' | QRIS '+rp(c.met.QRIS||0)+' | Transfer '+rp(c.met.Transfer||0)+' | '+c.trx+' trx');
-  if (R.keluar.length) t.push('Pengeluaran: '+R.keluar.map(function(x){ return x[0]+' '+rp(x[1]); }).join(', '));
+  R.baris.forEach(function(x){ t.push(x); });
   if (c.belum) t.push('Belum dibayar: '+c.belum+' pesanan ('+rp(c.belumRp)+')');
   if (R.perluBeli.length) t.push('', '⚠️ *Perlu beli:* '+R.perluBeli.map(function(x){ return x.nama+' '+x.q; }).join(', '));
   t.push('', '*SISA STOK*'); t.push(R.stokW.map(function(x){ return x.nama+' '+x.q; }).join(', '));
@@ -2203,12 +2217,18 @@ function laporanGambar(d, label, from, to){
     txt(fit(label+' · dibuat '+jam+' oleh '+A.me.nama, W-2*P-76, 13), P+74, y+60, 13, '500', '#6b5a50');
     y+=74; line(P,y,W-P,y,'#1d1410',3); y+=14;
     // total
-    if (M.total!==null){
-      var th=M.pisah?92:76; rr(P,y,W-2*P,th,16,'#1d1410');
-      txt('💼 TOTAL UANG KAS '+(harian?'SEKARANG':'AKHIR'), W/2, y+22, 12, '700', 'rgba(255,255,255,.8)', 'center');
+    if (M.pisah && (M.w.status==='ok' || M.r.status==='ok')){
+      var bw=(W-2*P-10)/2;
+      [[P,'☕ KAS WARKOP',M.w,'#7a3a1c'],[P+bw+10,'🚬 KAS ROKOK',M.r,'#1f4f86']].forEach(function(t){
+        rr(t[0],y,bw,72,16,t[3]);
+        txt(t[1]+' '+(harian?'SEKARANG':'AKHIR'), t[0]+bw/2, y+22, 11, '700', 'rgba(255,255,255,.9)', 'center');
+        txt(t[2].status==='ok'?rp(t[2].akhir):'—', t[0]+bw/2, y+54, 25, '800', '#fff', 'center', FS); });
+      y+=72+12;
+    } else if (!M.pisah && M.total!==null){
+      rr(P,y,W-2*P,76,16,'#1d1410');
+      txt('💼 UANG KAS '+(harian?'SEKARANG':'AKHIR'), W/2, y+22, 12, '700', 'rgba(255,255,255,.8)', 'center');
       txt(rp(M.total), W/2, y+58, 34, '800', '#fff', 'center', FS);
-      if (M.pisah) txt('Kas Warkop '+rp(M.w.akhir)+' + Kas Rokok '+rp(M.r.akhir), W/2, y+80, 12.5, '500', 'rgba(255,255,255,.85)', 'center');
-      y+=th+12;
+      y+=76+12;
     }
     // dua kartu kas
     var cw=(W-2*P-10)/2;
@@ -2231,9 +2251,9 @@ function laporanGambar(d, label, from, to){
     else { rr(P+cw+10,y,cw,h1,14,'#f6f3ef','#e0d6cc',2); txt('🚬 Kas Rokok', P+cw+22, y+24, 15, '800', '#8a786c'); txt('Belum dipisah', P+cw+22, y+46, 13, '500', '#8a786c'); }
     y+=Math.max(h1,h2)+20;
     // ringkasan bayar & pengeluaran
-    y=wrapC((harian?'Hari ini':'Periode')+': 💵 Cash '+rp(c.met.Cash||0)+' · 📱 QRIS '+rp(c.met.QRIS||0)+' · 🏦 Transfer '+rp(c.met.Transfer||0)+' · '+c.trx+' transaksi', y, 12.5, '#6b5a50', 18);
+    R.baris.forEach(function(t){ y=wrapC(t, y, 12.5, '#6b5a50', 18); });
     if (R.masuk.length) y=wrapC('Pemasukan lain: '+R.masuk.map(function(x){ return x[0]+' '+rp(x[1]); }).join(' · '), y, 12.5, '#6b5a50', 18);
-    y=wrapC('Pengeluaran: '+(R.keluar.length?R.keluar.map(function(x){ return x[0]+' '+rp(x[1]); }).join(' · '):'tidak ada'), y, 12.5, '#6b5a50', 18);
+
     if (c.belum) y=wrapC('⏳ '+c.belum+' pesanan belum dibayar ('+rp(c.belumRp)+') — belum dihitung', y, 12.5, '#b06a00', 18);
     // stok
     function judul(t, n){ y+=20; txt(t, P, y, 15, '800'); txt(n+' jenis', W-P, y, 12, '500', '#6b5a50', 'right'); y+=10; }
@@ -3077,8 +3097,8 @@ function kasCalc(orders, entries){
   return c;
 }
 /* tampilan Kas: Warkop saja / Rokok saja / Semua */
-function kasView(d0){
-  var mode = rokokMulai() ? (K.kas||'w') : 'all';
+function kasView(d0, paksa){
+  var mode = rokokMulai() ? (paksa||K.kas||'w') : 'all';
   if (mode==='all') return d0;
   var orders=[];
   (d0.orders||[]).forEach(function(o){
