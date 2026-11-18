@@ -379,6 +379,9 @@ em.pos{color:var(--ok)}em.neg{color:var(--bad)}
 .dtot2{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0}
 .dtot2>div{border-radius:16px;padding:10px 8px;text-align:center;color:#fff}.dtot2 .w{background:#7a3a1c}.dtot2 .r{background:#1f4f86}
 .dtot2 small{display:block;font-size:10.5px;letter-spacing:.5px;font-weight:700;opacity:.9}.dtot2 b{display:block;font-size:22px;font-family:Fraunces,Georgia,serif;line-height:1.25}
+.dr.setor b,.dr.setor span{color:#6a3fa0}
+.ksetor{display:flex;align-items:center;gap:10px;background:#f1eafa;border:1.5px solid #d6c4ee;border-radius:14px;padding:10px 12px;margin:8px 0;color:#4b2a7a;font-size:14px}
+.ksetor span{flex:1;font-weight:700}.ksetor small{display:block;font-weight:500;font-size:11.5px;color:#6b5a80}.ksetor b{font-size:16px;white-space:nowrap}
 .dtwo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
 .dk{border:2px solid #e8dccd;border-radius:14px;padding:9px 10px;font-size:12.5px;color:#1d1410;background:#fff;display:flex;flex-direction:column}
 .dk h4{margin:0 0 5px;font-size:14px}.dk.w1{border-color:#d9a283;background:#fdf4ee}.dk.r1{border-color:#9db8d9;background:#f1f6fc}
@@ -2072,12 +2075,13 @@ function bagianRokok(o){
   var nom=Number(o.nominal)||0; return rk>=sub ? nom : Math.round(nom*rk/sub);
 }
 function kasDuo(orders, entries){
-  var k={w:{masuk:0,keluar:0}, r:{masuk:0,keluar:0}};
+  var k={w:{masuk:0,keluar:0,setor:0}, r:{masuk:0,keluar:0,setor:0}};
   (orders||[]).forEach(function(o){ if (o.status==='Batal' || o.statusBayar!=='Lunas') return;
     var n=Number(o.nominal)||0, r=bagianRokok(o); k.r.masuk+=r; k.w.masuk+=n-r; });
   (entries||[]).forEach(function(e){ var x = pisahHari(e.tanggal) && isRokokEntry(e) ? k.r : k.w;
-    if (e.jenis==='Pemasukan') x.masuk+=Number(e.nominal)||0; else x.keluar+=Number(e.nominal)||0; });
+    if (e.jenis==='Pemasukan') x.masuk+=Number(e.nominal)||0; else if (isSetor(e)) x.setor+=Number(e.nominal)||0; else x.keluar+=Number(e.nominal)||0; });
   k.w.bersih=k.w.masuk-k.w.keluar; k.r.bersih=k.r.masuk-k.r.keluar;
+  k.w.gerak=k.w.bersih-k.w.setor; k.r.gerak=k.r.bersih-k.r.setor;
   return k;
 }
 function saldoCfg(j){
@@ -2100,7 +2104,7 @@ function lengkapiSaldo(d, from){
   return api('adminReport', A.pin, mulai, sampai).then(function(x){
     perlu.forEach(function(j){ var t=cfg[j].tgl;
       var k=kasDuo((x.orders||[]).filter(function(o){ return String(o.tgl)>t; }), (x.entries||[]).filter(function(e){ return String(e.tanggal)>t; }));
-      d.duo[j].sebelum = cfg[j].awal + k[j].bersih; });
+      d.duo[j].sebelum = cfg[j].awal + k[j].gerak; });
     return gabung(d);
   });
 }
@@ -2109,7 +2113,7 @@ function duoModel(d){
   var k=kasDuo(d.orders, d.entries), duo=d.duo||{}, pisah=!!rokokMulai();
   function one(j){ var s=duo[j], x=k[j];
     var st = !s ? 'none' : (s.sebelum===null || s.sebelum===undefined) ? 'early' : 'ok';
-    return {status:st, sebelum:st==='ok'?s.sebelum:0, masuk:x.masuk, keluar:x.keluar, bersih:x.bersih, akhir:st==='ok'?s.sebelum+x.bersih:null, awal:s?s.awal:0, tgl:s?s.tgl:''}; }
+    return {status:st, sebelum:st==='ok'?s.sebelum:0, masuk:x.masuk, keluar:x.keluar, bersih:x.bersih, setor:x.setor, akhir:st==='ok'?s.sebelum+x.gerak:null, awal:s?s.awal:0, tgl:s?s.tgl:''}; }
   var w=one('w'), r=one('r');
   if (!pisah) r.status='none';
   var total = w.status==='ok' && (r.status==='ok' || !pisah) ? w.akhir + (r.status==='ok'?r.akhir:0) : null;
@@ -2125,6 +2129,7 @@ function duoCardHtml(M, harian, idPrefix){
       '<div class="dr in"><span>Masuk</span><b>+'+rp(x.masuk)+'</b></div>' +
       '<div class="dr out"><span>Keluar</span><b>−'+rp(x.keluar)+'</b></div>' +
       '<div class="dr sum"><span>Bersih</span><b>'+(x.bersih>=0?'+':'')+rp(x.bersih)+'</b></div>' +
+      (x.setor ? '<div class="dr setor"><span>Setor bos</span><b>−'+rp(x.setor)+'</b></div>' : '') +
       (x.status==='ok' ? '<div class="dr big"><span>Saldo</span><b>'+rp(x.akhir)+'</b></div>' :
         '<div class="dnote">'+(x.status==='none'?'Saldo awal belum diisi':'Saldo awal berlaku mulai '+fmtTgl(hariBerikut(x.tgl)))+'</div>');
     return head+rows+'<button class="linkbtn" data-sa="'+j+'">⚙️ '+(x.status==='none'?'Isi saldo awal':'Saldo awal '+rp(x.awal)+' per '+fmtTgl(x.tgl).replace(/ \d{4}$/,''))+'</button></div>';
@@ -2154,12 +2159,13 @@ function lapRingkas(d){
   var urut=function(a,b){ return (b.low-a.low) || a.nama.localeCompare(b.nama); };
   var baris=[];
   function bayar(c2){ return '💵 Cash '+rp(c2.met.Cash||0)+' · 📱 QRIS '+rp(c2.met.QRIS||0)+' · 🏦 Transfer '+rp(c2.met.Transfer||0)+' · '+c2.trx+' transaksi'; }
-  function keluarDari(dd){ var Lx=lapData(dd), a=[]; Lx.belanja.forEach(function(b){ a.push(b.kategori+' '+rp(b.nominal)); }); Lx.keluar.forEach(function(x){ a.push(x.kat+(x.n>1?' '+x.n+'×':'')+' '+rp(x.rp)); }); return a.length?a.join(' · '):'tidak ada'; }
+  function keluarDari(dd){ var Lx=lapData(dd), a=[]; Lx.belanja.forEach(function(b){ a.push(b.kategori+' '+rp(b.nominal)); }); Lx.keluar.forEach(function(x){ if (!/setor/i.test(x.kat)) a.push(x.kat+(x.n>1?' '+x.n+'×':'')+' '+rp(x.rp)); }); return a.length?a.join(' · '):'tidak ada'; }
   if (M.pisah){
     var dw=kasView(d,'w'), dr=kasView(d,'r'), cw=kasCalc(dw.orders,dw.entries), cr=kasCalc(dr.orders,dr.entries);
     baris.push('☕ Warkop: '+bayar(cw), '☕ Pengeluaran warkop: '+keluarDari(dw), '🚬 Rokok: '+bayar(cr), '🚬 Pengeluaran rokok: '+keluarDari(dr));
   } else {
-    baris.push(bayar(c), 'Pengeluaran: '+(keluar.length?keluar.map(function(x){ return x[0]+' '+rp(x[1]); }).join(' · '):'tidak ada'));
+    var kel=keluar.filter(function(x){ return !/setor/i.test(x[0]); });
+    baris.push(bayar(c), 'Pengeluaran: '+(kel.length?kel.map(function(x){ return x[0]+' '+rp(x[1]); }).join(' · '):'tidak ada'));
   }
   stokW.sort(urut); stokR.sort(urut);
   return {L:L, M:M, c:c, keluar:keluar, baris:baris, masuk:masuk, stokW:stokW, stokR:stokR,
@@ -2182,7 +2188,7 @@ function ringkasTeks(R, label, harian, jam){
   var s=A.data.settings, c=R.c, M=R.M, t=['*LAPORAN '+(harian?'HARIAN':'PERIODE')+' '+(s.nama_warkop||'').toUpperCase()+'*', label+' · dibuat '+jam+' oleh '+A.me.nama, ''];
   if (!M.pisah && M.total!==null) t.push('💼 *UANG KAS: '+rp(M.total)+'*', '');
   function kas(nm, x){ t.push('*'+nm+'*'); if (x.status==='ok') t.push((harian?'Sisa kemarin: ':'Saldo awal: ')+rp(x.sebelum));
-    t.push('Masuk: +'+rp(x.masuk), 'Keluar: -'+rp(x.keluar)); if (x.status==='ok') t.push('*Saldo: '+rp(x.akhir)+'*'); t.push(''); }
+    t.push('Masuk: +'+rp(x.masuk), 'Keluar: -'+rp(x.keluar)); if (x.setor) t.push('Setor ke bos: -'+rp(x.setor)); if (x.status==='ok') t.push('*Saldo: '+rp(x.akhir)+'*'); t.push(''); }
   kas('☕ KAS WARKOP', M.w); if (M.pisah) kas('🚬 KAS ROKOK', M.r);
   R.baris.forEach(function(x){ t.push(x); });
   if (c.belum) t.push('Belum dibayar: '+c.belum+' pesanan ('+rp(c.belumRp)+')');
@@ -2236,12 +2242,13 @@ function laporanGambar(d, label, from, to){
       var yy=y, rows=[];
       if (k.status==='ok') rows.push([harian?'Sisa kemarin':'Saldo awal', rp(k.sebelum), '#1d1410']);
       rows.push(['Masuk '+(harian?'hari ini':'periode'), '+'+rp(k.masuk), '#2f7d4f'], ['Keluar '+(harian?'hari ini':'periode'), '−'+rp(k.keluar), '#b3261e']);
-      var h=36+rows.length*19+28+(k.status==='ok'?34:24);
+      var h=36+rows.length*19+28+(k.setor?19:0)+(k.status==='ok'?34:24);
       rr(x,yy,cw,h,14,bg,warna,2);
       txt(nm, x+12, yy+24, 15, '800');
       var ry=yy+44; rows.forEach(function(r){ txt(r[0], x+12, ry, 13); txt(r[1], x+cw-12, ry, 13, '800', r[2], 'right'); ry+=19; });
       line(x+12, ry-8, x+cw-12, ry-8, '#bbaa99', 1, [4,3]);
       txt('Bersih', x+12, ry+8, 13); txt((k.bersih>=0?'+':'')+rp(k.bersih), x+cw-12, ry+8, 13, '800', '#1d1410', 'right'); ry+=18;
+      if (k.setor){ txt('Setor ke bos', x+12, ry+9, 13, '500', '#6a3fa0'); txt('−'+rp(k.setor), x+cw-12, ry+9, 13, '800', '#6a3fa0', 'right'); ry+=19; }
       if (k.status==='ok'){ line(x+12, ry, x+cw-12, ry, '#1d1410', 2); txt('Saldo', x+12, ry+22, 14.5); txt(rp(k.akhir), x+cw-12, ry+23, 16, '800', '#1d1410', 'right'); }
       else txt(k.status==='none'?'Saldo awal belum diisi':'Saldo mulai '+fmtTgl(hariBerikut(k.tgl)), x+12, ry+16, 11.5, '500', '#8a786c');
       return h;
@@ -3043,7 +3050,7 @@ function cocokkanStokMenu(){
 /* ---------- Tab Keuangan / Kas (khusus Owner) ---------- */
 var BULAN = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
 var BULAN_PANJANG = ['Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
-var KATEGORI_KELUAR = ['Galon','Gas LPG','Bahan Baku','Es Batu','Listrik','Gaji','Sewa','Lainnya'];
+var KATEGORI_KELUAR = ['Setor ke Bos','Galon','Gas LPG','Bahan Baku','Es Batu','Listrik','Gaji','Sewa','Lainnya'];
 var KATEGORI_MASUK = ['Modal','Penjualan Manual','Lainnya'];
 var K = { mode:'hari', tgl:'', bln:'', thn:'', data:null, list:'semua' };
 function kasRange(){
@@ -3081,8 +3088,10 @@ function kasLoad(){
   api('adminReport', A.pin, r[0], r[1]).then(function(d){ return lengkapiSaldo(d, r[0]); }).then(function(d){ K.data=d; if (A.tab==='kas') kasRender(); })
     .catch(function(e){ if($('#kbody')) $('#kbody').innerHTML='<div class="empty">Gagal memuat: '+esc(e.message)+'<br><button class="btn" onclick="kasLoad()">Coba lagi</button></div>'; });
 }
+/* uang yang disetor/transfer ke bos: mengurangi saldo kas, tapi BUKAN pengeluaran */
+function isSetor(e){ return e && e.jenis==='Pengeluaran' && /setor/i.test(e.kategori||''); }
 function kasCalc(orders, entries){
-  var c={jual:0, masukLain:0, keluar:0, met:{Cash:0,QRIS:0,Transfer:0}, metKeluar:{Cash:0,QRIS:0,Transfer:0}, trx:0, belum:0, belumRp:0, batal:0, item:{}};
+  var c={setor:0, nSetor:0, jual:0, masukLain:0, keluar:0, met:{Cash:0,QRIS:0,Transfer:0}, metKeluar:{Cash:0,QRIS:0,Transfer:0}, trx:0, belum:0, belumRp:0, batal:0, item:{}};
   orders.forEach(function(o){
     if (o.status==='Batal'){ c.batal++; return; }
     if (o.statusBayar==='Lunas'){ c.jual+=o.nominal; c.trx++; c.met[o.metode]=(c.met[o.metode]||0)+o.nominal;
@@ -3091,6 +3100,7 @@ function kasCalc(orders, entries){
   });
   entries.forEach(function(e){
     if (e.jenis==='Pemasukan'){ c.masukLain+=e.nominal; c.met[e.metode]=(c.met[e.metode]||0)+e.nominal; }
+    else if (isSetor(e)){ c.setor+=e.nominal; c.nSetor++; }
     else { c.keluar+=e.nominal; c.metKeluar[e.metode]=(c.metKeluar[e.metode]||0)+e.nominal; }
   });
   c.masuk=c.jual+c.masukLain; c.bersih=c.masuk-c.keluar;
@@ -3125,7 +3135,8 @@ function kasRender(){
     (rokokMulai() ? '<div class="seg kasview" id="kview">'+[['w','☕ Warkop'],['r','🚬 Rokok'],['all','Semua']].map(function(x){ return '<button type="button" data-kv="'+x[0]+'" class="'+(kmode===x[0]?'on':'')+'">'+x[1]+'</button>'; }).join('')+'</div>' : '') +
     '<div class="kasbig"><small>KAS BERSIH '+(K.mode==='hari'?'HARI INI':'PERIODE INI')+kname+'</small><b class="'+(c.bersih<0?'neg':'')+'">'+rp(c.bersih)+'</b><span>Pemasukan − Pengeluaran</span></div>' +
     '<div class="kas2"><div class="kin"><small>PEMASUKAN</small><b>'+rp(c.masuk)+'</b><span>Penjualan '+rp(c.jual)+(c.masukLain?' + lain '+rp(c.masukLain):'')+'</span></div>' +
-      '<div class="kout"><small>PENGELUARAN</small><b>'+rp(c.keluar)+'</b><span>'+d.entries.filter(function(e){return e.jenis==='Pengeluaran';}).length+' catatan</span></div></div>' +
+      '<div class="kout"><small>PENGELUARAN</small><b>'+rp(c.keluar)+'</b><span>'+d.entries.filter(function(e){return e.jenis==='Pengeluaran' && !isSetor(e);}).length+' catatan</span></div></div>' +
+    (c.setor ? '<div class="ksetor">💼 <span>Disetor ke bos<small>tidak dihitung sebagai pengeluaran, hanya mengurangi saldo kas</small></span><b>−'+rp(c.setor)+'</b></div>' : '') +
     '<div class="kasmet">'+['Cash','QRIS','Transfer'].map(function(m){
         var net=(c.met[m]||0)-(c.metKeluar[m]||0);
         return '<div><small>'+PAY_ICON[m]+' '+m+'</small><b>'+rp(c.met[m]||0)+'</b>'+((c.metKeluar[m]||0)?'<span>keluar '+rp(c.metKeluar[m])+' · sisa '+rp(net)+'</span>':'<span>&nbsp;</span>')+'</div>';
@@ -3142,8 +3153,10 @@ function kasRender(){
     var keys=Object.keys(groups).sort().reverse();
     html += '<h3 class="serif kash3">📅 Rekap '+(K.mode==='bulan'?'per Hari':'per Bulan')+'</h3>' +
       (keys.length ? (function(){
-        var si=saldoInfo(d,c), run = si && !si.belum ? si.sebelum : null, saldoAt={};
-        keys.slice().sort().forEach(function(k){ var g=kasCalc(groups[k].o, groups[k].e); if(run!==null){ run+=g.bersih; saldoAt[k]=run; } });
+        var dv = kmode==='w' ? (D0.duo&&D0.duo.w) : kmode==='r' ? (D0.duo&&D0.duo.r) : null;
+        var si = kmode==='all' ? saldoInfo(D0,c) : (dv && dv.sebelum!==null && dv.sebelum!==undefined ? {sebelum:dv.sebelum, belum:false} : null);
+        var run = si && !si.belum ? si.sebelum : null, saldoAt={};
+        keys.slice().sort().forEach(function(k){ var g=kasCalc(groups[k].o, groups[k].e); if(run!==null){ run+=g.bersih-g.setor; saldoAt[k]=run; } });
         return '<div class="rekap'+(si && !si.belum?' w5':'')+'"><div class="rh"><span>'+(K.mode==='bulan'?'Tanggal':'Bulan')+'</span><span>Masuk</span><span>Keluar</span><span>Bersih</span>'+(si && !si.belum?'<span>Saldo</span>':'')+'</div>' +
         keys.map(function(k){ var g=kasCalc(groups[k].o, groups[k].e);
           var label = K.mode==='bulan' ? fmtTgl(k).replace(/ \d{4}$/,'') : BULAN_PANJANG[+k.slice(5,7)-1];
@@ -3197,7 +3210,7 @@ function kasRender(){
 function fmtNum(v){ v=String(v||'').replace(/\D/g,''); return v ? Number(v).toLocaleString('id-ID') : ''; }
 function editEntry(e){
   var isNew=!e.id, jenis=e.jenis||'Pengeluaran', metode=e.metode||'Cash', pisah=!!rokokMulai(), kas=isRokokEntry(e)?'r':'w';
-  var cats = kas==='r' ? (jenis==='Pengeluaran' ? ['Belanja Rokok','Rokok Lainnya'] : ['Modal Rokok','Rokok Lainnya']) : (jenis==='Pengeluaran' ? KATEGORI_KELUAR : KATEGORI_MASUK);
+  var cats = kas==='r' ? (jenis==='Pengeluaran' ? ['Setor Rokok ke Bos','Belanja Rokok','Rokok Lainnya'] : ['Modal Rokok','Rokok Lainnya']) : (jenis==='Pengeluaran' ? KATEGORI_KELUAR : KATEGORI_MASUK);
   var sh=openSheet('<h3 class="serif">'+(isNew?(jenis==='Pengeluaran'?'− Catat Pengeluaran':'＋ Catat Pemasukan Lain'):'✏️ Ubah Catatan')+'</h3>' +
     (isNew?'':'<div class="field"><span>JENIS</span><div class="seg" id="ej" style="margin:0"><button type="button" data-v="Pengeluaran" class="'+(jenis==='Pengeluaran'?'on':'')+'">Pengeluaran</button><button type="button" data-v="Pemasukan" class="'+(jenis==='Pemasukan'?'on':'')+'">Pemasukan</button></div></div>') +
     (pisah?'<div class="field"><span>KAS</span><div class="seg" id="ekas" style="margin:0"><button type="button" data-v="w" class="'+(kas==='w'?'on':'')+'">☕ Kas Warkop</button><button type="button" data-v="r" class="'+(kas==='r'?'on':'')+'">🚬 Kas Rokok</button></div></div>':'') +
